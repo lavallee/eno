@@ -1,0 +1,9 @@
+{
+  "id": "eno",
+  "name": "Eno",
+  "version": "0.1.0",
+  "minAppVersion": "1.4.0",
+  "description": "Vault intelligence: garden, hygiene, and retrieval over your eno-service.",
+  "author": "Marc Lavallee",
+  "isDesktopOnly": false
+}

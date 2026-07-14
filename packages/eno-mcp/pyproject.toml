@@ -1,0 +1,20 @@
+[project]
+name = "eno-mcp"
+version = "0.1.0"
+description = "eno-mcp — MCP stdio server exposing the vault's read tools to coding agents"
+requires-python = ">=3.12"
+license = { text = "MIT" }
+dependencies = [
+    "eno==0.1.0",
+    "mcp>=1.2",
+]
+
+[project.scripts]
+eno-mcp = "eno_mcp.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/eno_mcp"]

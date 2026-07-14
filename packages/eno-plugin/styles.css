@@ -1,0 +1,46 @@
+.eno-view h3 {
+  margin-top: 0;
+}
+
+.eno-view .eno-status p {
+  margin: 4px 0;
+  font-size: 0.85em;
+}
+
+.eno-view .eno-meta {
+  color: var(--text-muted);
+  font-size: 0.8em;
+}
+
+.eno-view .eno-error {
+  color: var(--color-red);
+}
+
+.eno-view .eno-report {
+  margin-top: 1em;
+  padding-top: 0.5em;
+  border-top: 1px solid var(--background-modifier-border);
+}
+
+.eno-view .eno-report ul {
+  padding-left: 0;
+  list-style: none;
+  font-family: var(--font-monospace);
+  font-size: 0.85em;
+}
+
+.eno-view .eno-report li {
+  margin: 2px 0;
+}
+
+.eno-view .eno-actions {
+  margin-top: 1em;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.eno-view .eno-actions button {
+  width: 100%;
+  text-align: left;
+}

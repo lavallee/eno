@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>eno · structural intelligence and gardening for your Obsidian vault</title>
+<meta name="description" content="eno indexes an Obsidian-style markdown vault into a queryable surface, gardens it, and exposes it to you (CLI), to coding agents (MCP), and to sibling tools (HTTP). Light core, no LLM dependency. Local-first.">
+<meta property="og:title" content="eno">
+<meta property="og:description" content="Structural intelligence and gardening for your Obsidian vault. Excerpt-first retrieval, hygiene, and MCP for coding agents. Light core, no LLM dependency.">
+<meta property="og:type" content="website">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="logo" href="./">
+      <span class="mark">eno</span>
+      <span class="mark-sub">/ v0.1.0</span>
+    </a>
+    <nav>
+      <a href="#why">why</a>
+      <a href="#install">install</a>
+      <a href="#mcp">mcp</a>
+      <a href="#llm">fold &amp; tiling</a>
+      <a class="gh" href="https://github.com/lavallee/eno" rel="noopener">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap">
+      <h1>Structural intelligence<br>for your Obsidian<br>vault.</h1>
+      <p class="lede">
+        A markdown vault grows into a pile. eno indexes it into a
+        queryable surface, gardens the orphans and stubs and drift, and
+        exposes it — to you on the command line, to coding agents over
+        MCP, to sibling tools over HTTP. Light core, no LLM dependency,
+        no phone-home.
+      </p>
+
+<pre class="code"><span class="prompt">$</span> pip install eno
+<span class="prompt">$</span> export ENO_VAULT_DIR=~/vault
+<span class="prompt">$</span> eno index
+<span class="prompt">$</span> eno hygiene
+<span class="c">→ 34 orphans · 12 stubs · 8 stale · 3 broken links · 2 drift candidates</span></pre>
+
+      <div class="hero-cta">
+        <a class="btn" href="#install">Get started</a>
+        <a class="btn btn-ghost" href="https://github.com/lavallee/eno" rel="noopener">Read the code</a>
+      </div>
+    </div>
+  </section>
+
+  <section id="why" class="section">
+    <div class="wrap">
+      <h2>Why eno</h2>
+      <p class="section-lede">
+        Every "what does my vault know about X?" costs a full-text grep
+        plus a fat LLM read. Every tool that wants the vault as memory
+        pays that tax. eno is the structural layer that makes markdown
+        behave like a real knowledge store.
+      </p>
+
+      <div class="row-list">
+        <div class="row">
+          <h3>Token-efficient by construction</h3>
+          <p>
+            Index queries return paths and small excerpts, never whole
+            notes. LLM operations are two-phase: cheap planning over the
+            index, then targeted reads. Nothing loads your entire vault
+            into a prompt.
+          </p>
+        </div>
+        <div class="row">
+          <h3>The vault is its own dashboard</h3>
+          <p>
+            Gardening reports are written back into the vault as notes
+            under <code>9 Vault Health/</code> — wikilinkable,
+            graph-visible, and indexable by eno itself. No bespoke UI for
+            things markdown already shows well.
+          </p>
+        </div>
+        <div class="row">
+          <h3>Drift, not broken links</h3>
+          <p>
+            A <code>[[Some Concept]]</code> written before its note
+            exists is groundwork, not a bug. The real bug class is
+            <em>drift</em>: a wikilink that <em>almost</em> resolves
+            (em-dash vs hyphen, casing, trailing punctuation) and
+            silently doesn't. eno separates the two.
+          </p>
+        </div>
+        <div class="row">
+          <h3>Resurface, don't enforce</h3>
+          <p>
+            eno surfaces the forgotten and suggests — it never
+            auto-merges, auto-deletes, or rewrites note bodies. Every
+            structural change keeps a human in the loop. Orphans aren't
+            bugs; they're forgotten gold.
+          </p>
+        </div>
+        <div class="row">
+          <h3>Local-first, no beacon</h3>
+          <p>
+            The core has no network dependency at all. The optional LLM
+            extra routes through
+            <a href="https://github.com/lavallee/somm">somm</a>, which is
+            local-first (ollama) by default — vault prose never has to
+            leave your machine.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="install" class="section section-alt">
+    <div class="wrap">
+      <h2>Install</h2>
+
+<pre class="code"><span class="c"># structural core + `eno` CLI — no LLM dependency:</span>
+<span class="prompt">$</span> pip install eno
+
+<span class="c"># MCP server for coding agents, and the HTTP service:</span>
+<span class="prompt">$</span> pip install eno-mcp eno-service
+
+<span class="c"># + local-first distillation & semantic dedup (fold, tiling):</span>
+<span class="prompt">$</span> pip install eno[llm]</pre>
+
+      <p class="section-lede">
+        Python 3.12+. Point eno at your vault with <code>--vault PATH</code>
+        or <code>$ENO_VAULT_DIR</code> — there is no default, because a
+        tool that operates on your notes should never guess which
+        directory that is.
+      </p>
+
+      <h3 class="sub">Retrieve, excerpt-first</h3>
+
+<pre class="code"><span class="prompt">$</span> eno search <span class="str">"mechanism design"</span>
+<span class="prompt">$</span> eno neighbors <span class="str">"2 Projects/Acme/Widget.md"</span>
+<span class="c">→ 4 backlinks · 7 outbound — paths + titles, not full notes</span></pre>
+    </div>
+  </section>
+
+  <section id="mcp" class="section">
+    <div class="wrap">
+      <h2>MCP for your coding agent</h2>
+      <p class="section-lede">
+        A stdio server gives any MCP client — Claude Code, Cursor,
+        Windsurf — a structural view of the vault. The intelligence is
+        the <em>calling</em> agent; eno needs no model of its own here.
+      </p>
+
+      <div class="row-list">
+        <div class="row">
+          <h3>Retrieval &amp; health tools</h3>
+          <p>
+            <code>eno_search</code>, <code>eno_note</code>,
+            <code>eno_neighbors</code>, <code>eno_concepts</code>,
+            <code>eno_frontier</code>, <code>eno_hot</code>,
+            <code>eno_orphans</code>, <code>eno_stubs</code>,
+            <code>eno_stale</code>, <code>eno_broken_links</code>,
+            <code>eno_drift</code>, <code>eno_hygiene</code>,
+            <code>eno_health</code>. Your agent grounds its answers in
+            what you've actually written, cheaply.
+          </p>
+        </div>
+        <div class="row">
+          <h3>Write back with provenance</h3>
+          <p>
+            <code>eno_create_note</code> and
+            <code>eno_append_to_note</code> let an agent file content
+            into the vault, carrying an <code>author</code> so
+            machine-written pages stay distinguishable from yours.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="llm" class="section section-alt">
+    <div class="wrap">
+      <h2>fold &amp; tiling — the LLM extra</h2>
+      <p class="section-lede">
+        <code>pip install eno[llm]</code> adds two local-first
+        intelligence features. Both route through
+        <a href="https://github.com/lavallee/somm">somm</a>; eno itself
+        makes no assumption about a model runtime, and calling them
+        without the extra returns a clean install hint, not a crash.
+      </p>
+
+      <div class="row-list">
+        <div class="row">
+          <h3>eno fold — cited distillation</h3>
+          <p>
+            Distills a date range or a topic (by wikilink, folder, or
+            tag) into a structured, cited rollup note — with supersession
+            metadata and fold-of-folds level stacking. Extractive-only,
+            with a count-check that flags any numeric claim or citation
+            date not present in the sources.
+          </p>
+        </div>
+        <div class="row">
+          <h3>eno tiling — semantic dedup</h3>
+          <p>
+            Finds notes that say the same thing in different words, in
+            two confidence bands. A signal for human review, never an
+            auto-merge. Complements title-based duplicate detection with
+            a body-content similarity axis.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>
+      eno · <a href="https://github.com/lavallee/eno" rel="noopener">source</a> ·
+      <a href="https://github.com/lavallee/eno/blob/main/LICENSE">MIT license</a> ·
+      <a href="https://github.com/lavallee/eno/blob/main/CHANGELOG.md">changelog</a>
+    </p>
+    <p class="tiny">Your vault, queryable. Local-first. No beacon, no cloud, no lock-in.</p>
+  </div>
+</footer>
+
+</body>
+</html>

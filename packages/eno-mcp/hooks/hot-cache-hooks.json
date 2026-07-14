@@ -1,0 +1,28 @@
+{
+  "_comment": "Drop the `hooks` key into ~/.claude/settings.json (or a project-level settings file) for any Claude Code project that has eno-mcp wired up. Two hooks: SessionStart injects 'eno hot' at conversation start; PostCompact re-injects after compaction (hook-injected context does NOT survive compaction — only CLAUDE.md does). Stop is intentionally omitted: in eno, durable session output flows through eno_create_note / eno_append_to_note (provenance via author=[[<agent>]]), so there's no hot.md to overwrite. The 'eno hot' command always derives fresh from the index, so there's no staleness risk.",
+  "_assumptions": "ENO_VAULT_DIR points at the Obsidian vault. ENO_AGENT_NAME is the agent's name as it appears in note frontmatter author fields (e.g. Weaver). Both must already be set in the agent's environment (the eno-mcp config sets them — see packages/eno-mcp/README.md). The eno repo absolute path below MUST be edited to match your install.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -n \"${ENO_VAULT_DIR:-}\" ] && uv --directory /CHANGE_ME/path/to/eno run eno --vault \"$ENO_VAULT_DIR\" hot --agent \"${ENO_AGENT_NAME:-}\" 2>/dev/null || true"
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "matcher": "",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "[ -n \"${ENO_VAULT_DIR:-}\" ] && uv --directory /CHANGE_ME/path/to/eno run eno --vault \"$ENO_VAULT_DIR\" hot --agent \"${ENO_AGENT_NAME:-}\" 2>/dev/null || true"
+          }
+        ]
+      }
+    ]
+  }
+}
