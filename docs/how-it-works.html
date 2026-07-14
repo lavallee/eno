@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark light">
+<title>How eno works · indexing, retrieval, and gardening for an Obsidian vault</title>
+<meta name="description" content="How eno turns a pile of markdown into a queryable surface: the index pipeline, and what it surfaces — orphans, drift vs incipient links, frontier, and hygiene — shown over a real demo vault with accessible, vizier-designed charts.">
+<meta property="og:title" content="How eno works">
+<meta property="og:description" content="The eno pipeline, and what it surfaces over a real demo vault — with accessible, vizier-designed charts.">
+<meta property="og:type" content="website">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site">
+  <div class="wrap">
+    <a class="logo" href="./">
+      <span class="mark">eno</span>
+      <span class="mark-sub">/ how it works</span>
+    </a>
+    <nav>
+      <a href="./#why">why</a>
+      <a href="#pipeline">pipeline</a>
+      <a href="#surfaces">what it surfaces</a>
+      <a href="#try">try it</a>
+      <a class="gh" href="https://github.com/lavallee/eno" rel="noopener">GitHub</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap">
+      <h1>How eno works.</h1>
+      <p class="lede">
+        eno reads a folder of markdown once, indexes its <em>structure</em> —
+        frontmatter, wikilinks, tags, headings — into a small SQLite database,
+        and answers questions from that index instead of re-reading files. Below:
+        the pipeline, then what it surfaces, shown over a real
+        <a href="#try">demo vault</a> you can run yourself.
+      </p>
+    </div>
+  </section>
+
+  <section id="pipeline" class="section">
+    <div class="wrap">
+      <h2>One index, many surfaces</h2>
+      <p class="section-lede">
+        Everything downstream reads the index, never the whole vault. Queries
+        return paths and ~1&nbsp;KB excerpts; the only time a full note is read
+        is when you explicitly ask for one. That's what keeps it cheap enough to
+        put behind an agent.
+      </p>
+
+<div class="pipeline">   your vault/                       <span class="c">eno never loads whole notes into a prompt —</span>
+   ├─ 2 Projects/…                  <span class="c">it indexes structure and returns excerpts.</span>
+   ├─ 2 Research Areas/…
+   └─ z Daily Notes/…
+        │
+        │   <b>eno index</b>   <span class="c">parse frontmatter · wikilinks · tags · headings</span>
+        ▼
+   ┌───────────────────┐
+   │   <b>.eno/index.db</b>    │   <span class="c">SQLite — the queryable surface</span>
+   └───────────────────┘
+        │
+   ┌────┴────────────┬─────────────────┬────────────────────┐
+   ▼                 ▼                 ▼                    ▼
+ <b>RETRIEVE</b>          <b>GARDEN</b>            <i>LLM extra</i>            <b>WRITE</b>
+ search · note     orphans · stubs   <i>fold</i>   distill        create-note
+ neighbors         stale · drift     <i>tiling</i> dedup          append-to-note
+ frontier · hot    hygiene·health    <i>enowiki[llm]</i>          → back to vault
+   │                 │                 │                    │
+   └────┬────────────┴─────────────────┴────────────────────┘
+        ▼
+ <b>SURFACES</b>   eno <span class="c">(CLI)</span> · eno-mcp <span class="c">(agents)</span> · eno-service <span class="c">(HTTP)</span> · eno-plugin <span class="c">(Obsidian)</span></div>
+
+      <p class="section-lede">
+        Gardening output is written <em>back into the vault</em> as notes under
+        <code>9 Vault Health/</code> — wikilinkable and graph-visible, so the
+        vault stays its own dashboard. eno suggests; it never auto-merges or
+        deletes.
+      </p>
+    </div>
+  </section>
+
+  <section id="surfaces" class="section section-alt">
+    <div class="wrap">
+      <h2>What it surfaces</h2>
+      <p class="section-lede">
+        These four views come straight from running eno over the shipped
+        <a href="#try">demo vault</a> — no LLM required. The chart forms and
+        colours were chosen with
+        <a href="https://github.com/lavallee/vizier">vizier</a>: horizontal bars
+        for ranked magnitudes, divided bars for part-to-whole, a colourblind-safe
+        blue/orange split, and label ink validated to WCAG AA contrast.
+      </p>
+
+      <div class="chart">
+        <div class="chart-head">Orphans by size — buried research</div>
+        <div class="bars">
+          <div class="bar-row">
+            <div class="bar-label" title="The Forgetting Curve and Memory Consolidation">The Forgetting Curve</div>
+            <div class="bar-track"><div class="bar-fill" style="width:100%"><span class="bar-val">852w</span></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label" title="Information Foraging Theory">Information Foraging Theory</div>
+            <div class="bar-track"><div class="bar-fill" style="width:68.3%"><span class="bar-val">582w</span></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label" title="Attention Residue and Context Switching">Attention Residue</div>
+            <div class="bar-track"><div class="bar-fill" style="width:52.2%"><span class="bar-val">445w</span></div></div>
+          </div>
+        </div>
+        <p class="chart-note">
+          Substantial notes that <em>nothing</em> links to — the biggest ones are
+          usually the most-buried important work, not junk. eno ranks them by size
+          so you resurface the gold first.
+          <span class="form">vizier form: bar chart · Magnitude / Ranking</span>
+        </p>
+      </div>
+
+      <div class="chart">
+        <div class="chart-head">Unresolved wikilinks — groundwork vs. bugs</div>
+        <div class="divided">
+          <div class="seg" style="width:88.5%;background:var(--accent)">23 incipient</div>
+          <div class="seg" style="width:11.5%;background:var(--warn)">3 drift</div>
+        </div>
+        <div class="legend">
+          <span><span class="swatch" style="background:var(--accent)"></span> incipient — deliberate groundwork for not-yet-written notes (<em>not</em> bugs)</span>
+          <span><span class="swatch" style="background:var(--warn)"></span> drift — links that <em>almost</em> resolve (<code>[[Systems&nbsp;&nbsp;Thinking]]</code>) — the real bugs</span>
+        </div>
+        <p class="chart-note">
+          A raw "broken links" count would flag all 26 as errors. eno separates the
+          23 intentional concept-seeds from the 3 genuine near-misses — so you fix
+          what's actually broken and leave the groundwork alone.
+          <span class="form">vizier form: divided bar · Part-to-whole · blue/orange is colourblind-safe</span>
+        </p>
+      </div>
+
+      <div class="chart">
+        <div class="chart-head">Frontmatter hygiene — coverage</div>
+        <div class="divided">
+          <div class="seg" style="width:76.9%;background:var(--accent-2)">20 complete</div>
+          <div class="seg" style="width:23.1%;background:var(--fg-dim);color:#ffffff">6 missing</div>
+        </div>
+        <div class="legend">
+          <span><span class="swatch" style="background:var(--accent-2)"></span> complete — has <code>origin</code> + <code>stage</code></span>
+          <span><span class="swatch" style="background:var(--fg-dim)"></span> missing a required field — incomplete, not an error</span>
+        </div>
+        <p class="chart-note">
+          77% of the vault has complete frontmatter. eno tells you exactly which
+          notes and which fields are missing, so the contract is enforced by
+          suggestion, never by rewriting your notes.
+          <span class="form">vizier form: divided bar · Part-to-whole (honest where a pie would mislead)</span>
+        </p>
+      </div>
+
+      <div class="chart">
+        <div class="chart-head">Frontier — threads reaching outward</div>
+        <div class="bars">
+          <div class="bar-row">
+            <div class="bar-label" title="Map of Content - Learning">Map of Content — Learning</div>
+            <div class="bar-track"><div class="bar-fill" style="width:100%;background:var(--accent-2)"><span class="bar-val">11.76</span></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label" title="Building a Research Workflow">Building a Research Workflow</div>
+            <div class="bar-track"><div class="bar-fill" style="width:67.0%;background:var(--accent-2)"><span class="bar-val">7.88</span></div></div>
+          </div>
+          <div class="bar-row">
+            <div class="bar-label" title="Learning in Public">Learning in Public</div>
+            <div class="bar-track"><div class="bar-fill" style="width:27.8%;background:var(--accent-2)"><span class="bar-val">3.27</span></div></div>
+          </div>
+        </div>
+        <p class="chart-note">
+          Pages with high out-degree, low in-degree, and a recent touch — where the
+          vault is actively reaching for new ground. Score is
+          <code>(out − in) · e<sup>−age/halflife</sup></code>; the well-linked hubs
+          correctly score negative and drop out.
+          <span class="form">vizier form: bar chart · Magnitude / Ranking</span>
+        </p>
+      </div>
+
+    </div>
+  </section>
+
+  <section id="try" class="section">
+    <div class="wrap">
+      <h2>Try it in two minutes</h2>
+      <p class="section-lede">
+        The repo ships a small synthetic vault at
+        <a href="https://github.com/lavallee/eno/tree/main/examples/demo-vault"><code>examples/demo-vault</code></a>
+        so you can reproduce everything above without pointing eno at your own
+        notes yet.
+      </p>
+
+<pre class="code"><span class="prompt">$</span> pip install enowiki
+<span class="prompt">$</span> git clone https://github.com/lavallee/eno
+<span class="prompt">$</span> eno --vault eno/examples/demo-vault index
+<span class="prompt">$</span> eno --vault eno/examples/demo-vault hygiene
+<span class="prompt">$</span> eno --vault eno/examples/demo-vault orphans</pre>
+
+      <p class="section-lede">
+        Then point it at your own vault: <code>export ENO_VAULT_DIR=~/vault</code>
+        and drop the <code>--vault</code> flag. See the
+        <a href="https://github.com/lavallee/eno#readme">README</a> for the full
+        tour and the <a href="https://github.com/lavallee/eno/blob/main/packages/eno-mcp/README.md">MCP setup</a>
+        for wiring eno into a coding agent.
+      </p>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <p>
+      eno · <a href="./">home</a> ·
+      <a href="https://github.com/lavallee/eno" rel="noopener">source</a> ·
+      <a href="https://github.com/lavallee/eno/blob/main/CHANGELOG.md">changelog</a>
+    </p>
+    <p class="tiny">Charts designed with <a href="https://github.com/lavallee/vizier">vizier</a> — accessible by construction.</p>
+  </div>
+</footer>
+
+</body>
+</html>

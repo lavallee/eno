@@ -17,12 +17,43 @@ distillation and semantic dedup.
 > The PyPI package is **`enowiki`** (the bare `eno` was already taken). The
 > command, the config vars, and the `import eno` module are all just `eno`.
 
+📊 **[See how it works →](https://lavallee.github.io/eno/how-it-works.html)** —
+the pipeline, and what eno surfaces, shown as charts over the demo vault below.
+
+## Two-minute hello world
+
+No vault of your own to point at yet? The repo ships a small synthetic vault so
+you can watch everything work in under a minute:
+
+```console
+$ pip install enowiki
+$ git clone https://github.com/lavallee/eno && cd eno
+
+$ eno --vault examples/demo-vault index
+indexed 26 of 26 notes — 47 links resolved, 26 broken in 0.02s
+
+$ eno --vault examples/demo-vault hygiene
+hygiene: 6 of 26 notes have issues
+  missing origin: 4
+  missing stage: 5
+
+$ eno --vault examples/demo-vault orphans --min-words 200
+  2 Research Areas/The Forgetting Curve and Memory Consolidation.md  [The Forgetting Curve …]  (852 words)
+  2 Research Areas/Information Foraging Theory.md  [Information Foraging Theory]  (582 words)
+  2 Research Areas/Attention Residue and Context Switching.md  [Attention Residue …]  (445 words)
+
+$ eno --vault examples/demo-vault frontier
+   11.76  out=14  in=1   age=  3d   2 Research Areas/Map of Content - Learning.md
+    7.88  out=10  in=1   age=  4d   2 Projects/Building a Research Workflow.md
+    3.27  out=5   in=1   age=  6d   2 Projects/Learning in Public.md
+```
+
+Point it at your own vault with `--vault ~/notes`, or set `ENO_VAULT_DIR` once
+and drop the flag:
+
 ```bash
-pip install enowiki
-export ENO_VAULT_DIR=~/vault      # or pass --vault to any command
-eno index                         # build the index
-eno hygiene                       # orphans, stubs, stale, broken links
-eno search "mechanism design"     # paths + excerpts, not full notes
+export ENO_VAULT_DIR=~/notes
+eno index && eno hygiene
 ```
 
 ## Why eno
@@ -46,27 +77,42 @@ eno search "mechanism design"     # paths + excerpts, not full notes
 
 | Package | What it is | Install |
 | --- | --- | --- |
-| `enowiki` | The library + `eno` CLI: index, retrieve, garden, hygiene | `pip install enowiki` |
-| `eno-mcp` | MCP stdio server exposing the read/write tools to coding agents | `pip install eno-mcp` |
-| `eno-service` | FastAPI face on the read endpoints, for sibling tools | `pip install eno-service` |
-| `eno-plugin` | Obsidian plugin talking to a running `eno-service` | see [`packages/eno-plugin`](packages/eno-plugin) |
+| [`enowiki`](packages/eno) | The library + `eno` CLI: index, retrieve, garden, hygiene | `pip install enowiki` |
+| [`eno-mcp`](packages/eno-mcp) | MCP stdio server exposing the read/write tools to coding agents | `pip install eno-mcp` |
+| [`eno-service`](packages/eno-service) | FastAPI face on the read endpoints, for sibling tools | `pip install eno-service` |
+| [`eno-plugin`](packages/eno-plugin) | Obsidian plugin talking to a running `eno-service` | (from source) |
 
-## What it does
+## A tour of what it does
 
-**Retrieve** — `search`, `note`, `neighbors`, `concepts`, `frontier`, `hot`.
-Graph-aware, excerpt-first retrieval over frontmatter, wikilinks, tags, and
-headings.
+**Retrieve** — excerpt-first, graph-aware. `search` (title/tag), `note`
+(frontmatter + headings + a ~400-char excerpt), `neighbors` (backlinks +
+outbound), `concepts`, `frontier`, `hot`.
+
+```console
+$ eno --vault examples/demo-vault search recall
+  5 Tools and Techniques/Active Recall.md  [Active Recall]
+  2 Research Areas/Synthesis - Spaced Repetition and Active Recall.md  [Synthesis …]
+```
 
 **Garden & check health** — `orphans`, `stubs`, `stale`, `broken-links`,
-`drift`, `hygiene`, `health`. Drift is the interesting one: fuzzy-matched
-wikilink targets that *almost* resolve (a real bug), as distinct from
-deliberately-incipient links (groundwork, not a bug).
+`hygiene`, `health`, plus a `garden` pass that writes a dated report into
+`9 Vault Health/`. The interesting distinction is **drift vs. incipient links**:
+a `[[Concept]]` written before its note exists is deliberate groundwork, not a
+bug; the real bug is a link that *almost* resolves (`[[Systems  Thinking]]` with
+a stray space). eno's `garden` report separates the two — in the demo vault, 23
+intentional concept-seeds from 3 genuine near-misses.
 
 **For coding agents (MCP)** — a stdio server gives any MCP client (Claude Code,
 Cursor, Windsurf, …) a structural view of the vault: the retrieval and health
 tools above, plus `eno_create_note` / `eno_append_to_note` for writing back
 with provenance. The intelligence here is the *calling* agent — no model setup
-of eno's own required.
+of eno's own required. See the
+[`eno-mcp` README](packages/eno-mcp/README.md) for the config and the agent
+onboarding skill.
+
+**Serve it** — `eno-serve` puts the read endpoints behind FastAPI so several
+tools (and the Obsidian plugin) can share one index on a host. See the
+[`eno-service` README](packages/eno-service/README.md).
 
 ### With the LLM extra (`pip install enowiki[llm]`)
 
@@ -95,14 +141,31 @@ There is no default — a tool that operates on your notes should never guess
 which directory that is. The index lives at `<vault>/.eno/` (override with
 `$ENO_DIR`).
 
+## Documentation
+
+- **[How eno works](https://lavallee.github.io/eno/how-it-works.html)** — the
+  pipeline plus what eno surfaces, as accessible charts over the demo vault.
+- **[`examples/demo-vault`](examples/demo-vault)** — the shipped synthetic vault
+  used throughout these docs; safe to index and experiment on.
+- **[MCP setup](packages/eno-mcp/README.md)** — wiring eno into a coding agent.
+- **[CONTRIBUTING](CONTRIBUTING.md)** · **[CHANGELOG](CHANGELOG.md)** ·
+  **[RELEASING](RELEASING.md)**.
+
 ## Status
 
-**v0.1.0 — first public release.** The structural core, MCP server, and HTTP
-service are stable in day-to-day use over a ~1k-note vault. The Obsidian plugin
-is functional but the least battle-tested surface. Semantic embeddings are
-intentionally deferred to the `[llm]` extra rather than baked into the core.
+**Stable core, active development.** The structural core, MCP server, and HTTP
+service are used daily over a ~1k-note vault. The Obsidian plugin is functional
+but the least battle-tested surface. Semantic embeddings are intentionally
+deferred to the `[llm]` extra rather than baked into the core.
 
 Requires Python 3.12+.
+
+## Contributing
+
+Issues and PRs welcome — see [CONTRIBUTING.md](CONTRIBUTING.md). The short
+version: `uv sync --all-packages`, then `uv run pytest packages/` and
+`uv run ruff check packages/`. Anything that needs a model belongs behind the
+`[llm]` extra with a lazy import, never in the core dependencies.
 
 ## License
 

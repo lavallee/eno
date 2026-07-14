@@ -1,7 +1,20 @@
 # eno-mcp
 
-MCP stdio server exposing eno's read + write tools to coding agents and
-autonomous agents (Claude Code, Cursor, anything that speaks MCP).
+MCP stdio server exposing [eno](https://github.com/lavallee/eno)'s read +
+write tools to coding agents and autonomous agents (Claude Code, Cursor,
+anything that speaks MCP). It gives an MCP client a structural view of an
+Obsidian vault; the intelligence is the *calling* agent — no model setup of
+eno's own required.
+
+## Install
+
+```bash
+pip install eno-mcp
+```
+
+Requires Python 3.12+. Pulls in the `enowiki` core (which imports as `eno`).
+The server exposes the tools over stdio; you wire it into your agent's MCP
+config (below).
 
 ## Tools
 
@@ -12,9 +25,12 @@ Read:
 - `eno_orphans` — notes with no inbound links (resurfacing)
 - `eno_stubs` — short notes with no outbound links
 - `eno_stale` — notes past a recency threshold
+- `eno_frontier` — pages actively reaching outward (high out-degree, low in-degree, recent)
+- `eno_hot` — session-start "what's hot" bundle (frontier + recent + concepts + your recent notes)
 - `eno_broken_links` — raw broken wikilinks (use eno_concepts / eno_drift instead for classified output)
 - `eno_concepts` — incipient wikilinks (groundwork for not-yet-written notes)
 - `eno_drift` — drift candidates (almost-matches, real bugs)
+- `eno_tiling` — body-content semantic dedup (needs the core's `enowiki[llm]` extra)
 - `eno_hygiene` — frontmatter contract violations
 - `eno_health` — diagnostic
 
@@ -27,26 +43,30 @@ Write:
 Many autonomous agents load MCP servers natively. Two pieces:
 
 **1. Onboarding skill.** Drop the agent brief into a place the agent
-loads from at startup (skill directory, system prompt path, etc.).
+loads from at startup (skill directory, system prompt path, etc.). The
+brief ships in this repo at
+[`skills/agent-onboarding.md`](https://github.com/lavallee/eno/blob/main/packages/eno-mcp/skills/agent-onboarding.md).
 
 ```sh
 # Whichever of these matches your agent's setup:
-cp packages/eno-mcp/skills/agent-onboarding.md \
+cp skills/agent-onboarding.md \
    ~/.config/my-agent/skills/
 
 # or, if you sync skills via the vault:
-cp packages/eno-mcp/skills/agent-onboarding.md \
+cp skills/agent-onboarding.md \
    /path/to/vault/.eno/skills/
 ```
 
 The onboarding brief covers the postures (resurfacing > collecting,
 incipient links are intentional, two-phase reads), the tool inventory,
 and common patterns. Self-contained. Read it yourself before deploying
-— it's the contract
-the agent will operate under.
+— it's the contract the agent will operate under.
 
 **2. MCP config.** Add eno-mcp to the agent's MCP config — typically
-`~/.config/my-agent/mcp.json` or whatever your install expects.
+`~/.config/my-agent/mcp.json` or whatever your install expects. If you
+installed with `pip install eno-mcp`, the command is simply `eno-mcp`
+(with `"args": []`); the examples below use `uv run --directory` for
+running against a source checkout.
 
 ```json
 {
@@ -69,7 +89,7 @@ the agent will operate under.
 ```
 
 Or, if you prefer the agent to talk to a long-running `eno-serve` daemon
-on dash-main (so multiple agents share one index):
+on a shared host (so multiple agents share one index):
 
 ```json
 {
@@ -78,7 +98,7 @@ on dash-main (so multiple agents share one index):
       "command": "uv",
       "args": ["run", "--directory", "/path/to/eno", "eno-mcp"],
       "env": {
-        "ENO_SERVICE_URL": "http://dash-main:7891",
+        "ENO_SERVICE_URL": "http://your-host:7891",
         "ENO_AGENT_NAME": "Weaver"
       }
     }
@@ -106,7 +126,7 @@ The server picks a backend at runtime:
 - otherwise → LocalBackend (direct sqlite at `$ENO_VAULT_DIR/.eno/index.db`)
 
 Single-host work: omit `ENO_SERVICE_URL`, set `ENO_VAULT_DIR`. Multi-host
-fleet: run `eno-serve` on dash-main and point all workstation agents at
+fleet: run `eno-serve` on a shared host and point all workstation agents at
 it via `ENO_SERVICE_URL`.
 
 ## Two postures encoded in the tool docstrings
@@ -124,3 +144,7 @@ extending:
 
 If you add a tool that touches link integrity or vault structure, match
 this framing.
+
+## License
+
+MIT — see [LICENSE](https://github.com/lavallee/eno/blob/main/LICENSE).

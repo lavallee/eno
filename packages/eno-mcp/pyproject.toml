@@ -1,11 +1,12 @@
 [project]
 name = "eno-mcp"
-version = "0.1.0"
+version = "0.1.1"
 description = "eno-mcp — MCP stdio server exposing the vault's read tools to coding agents"
+readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
 dependencies = [
-    "enowiki==0.1.0",  # the core package (imports as `eno`)
+    "enowiki==0.1.1",  # the core package (imports as `eno`)
     "mcp>=1.2",
 ]
 

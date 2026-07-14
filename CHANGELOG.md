@@ -7,6 +7,30 @@ workspace move in lockstep.
 
 ## [Unreleased]
 
+## [0.1.1] — 2026-07-14
+
+Documentation and onboarding. No API, CLI, or schema changes.
+
+### Added
+
+- **`examples/demo-vault`** — a small synthetic Obsidian vault that exercises
+  every eno feature (orphans, stubs, drift vs. incipient links, frontier,
+  hygiene gaps), so you can `eno --vault examples/demo-vault index` and see real
+  signal without pointing eno at your own notes.
+- **["How eno works"](https://lavallee.github.io/eno/how-it-works.html)** page on
+  the docs site — the index pipeline plus what eno surfaces, as accessible charts
+  over the demo vault. Chart forms and colours were chosen with
+  [vizier](https://github.com/lavallee/vizier) (horizontal bars for ranked
+  magnitudes, divided bars for part-to-whole, colourblind-safe palette,
+  AA-validated label ink).
+- Per-package READMEs for `enowiki`, `eno-mcp`, and `eno-service`, wired as the
+  PyPI `readme` so each project page renders.
+
+### Changed
+
+- Expanded the main README with a two-minute hello-world over the demo vault and
+  a fuller CLI tour.
+
 ## [0.1.0] — 2026-07-14
 
 First public release.
@@ -35,5 +59,6 @@ First public release.
 - Vault location is configured via `--vault` or `$ENO_VAULT_DIR`; there is no
   default path.
 
-[Unreleased]: https://github.com/lavallee/eno/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/lavallee/eno/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/lavallee/eno/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/lavallee/eno/releases/tag/v0.1.0
