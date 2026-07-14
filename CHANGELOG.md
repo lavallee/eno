@@ -24,7 +24,7 @@ First public release.
 - **HTTP service (`eno-service`)** — FastAPI face on the read endpoints for
   sibling tools.
 - **Obsidian plugin (`eno-plugin`)** — talks to a running `eno-service`.
-- **LLM extra (`eno[llm]`)** — `fold` (time-range and topic-driven distillation
+- **LLM extra (`enowiki[llm]`)** — `fold` (time-range and topic-driven distillation
   with supersession metadata and fold-of-folds level stacking) and `tiling`
   (body-content semantic dedup), routed through
   [somm](https://github.com/lavallee/somm). Lazily imported: the core installs

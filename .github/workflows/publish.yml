@@ -7,7 +7,7 @@
 # gets its own GitHub environment, "pypi-<package>":
 #
 #   package        environment
-#   eno            pypi-eno
+#   enowiki        pypi-enowiki      (the core; imports as `eno`)
 #   eno-mcp        pypi-eno-mcp
 #   eno-service    pypi-eno-service
 #
@@ -33,7 +33,7 @@ jobs:
       fail-fast: false
       matrix:
         package:
-          - eno
+          - enowiki
           - eno-mcp
           - eno-service
     environment:

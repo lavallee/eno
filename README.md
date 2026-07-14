@@ -9,13 +9,16 @@ the vault into a queryable surface, gardens it, and exposes it — to you on the
 command line, to coding agents over MCP, and to sibling tools over a local HTTP
 service.
 
-The core is deliberately light: `pip install eno` gives you the whole
+The core is deliberately light: `pip install enowiki` gives you the whole
 structural and gardening surface with **no LLM dependency** and no model
-runtime to stand up. The optional `eno[llm]` extra adds local-first
+runtime to stand up. The optional `enowiki[llm]` extra adds local-first
 distillation and semantic dedup.
 
+> The PyPI package is **`enowiki`** (the bare `eno` was already taken). The
+> command, the config vars, and the `import eno` module are all just `eno`.
+
 ```bash
-pip install eno
+pip install enowiki
 export ENO_VAULT_DIR=~/vault      # or pass --vault to any command
 eno index                         # build the index
 eno hygiene                       # orphans, stubs, stale, broken links
@@ -43,7 +46,7 @@ eno search "mechanism design"     # paths + excerpts, not full notes
 
 | Package | What it is | Install |
 | --- | --- | --- |
-| `eno` | The library + `eno` CLI: index, retrieve, garden, hygiene | `pip install eno` |
+| `enowiki` | The library + `eno` CLI: index, retrieve, garden, hygiene | `pip install enowiki` |
 | `eno-mcp` | MCP stdio server exposing the read/write tools to coding agents | `pip install eno-mcp` |
 | `eno-service` | FastAPI face on the read endpoints, for sibling tools | `pip install eno-service` |
 | `eno-plugin` | Obsidian plugin talking to a running `eno-service` | see [`packages/eno-plugin`](packages/eno-plugin) |
@@ -65,7 +68,7 @@ tools above, plus `eno_create_note` / `eno_append_to_note` for writing back
 with provenance. The intelligence here is the *calling* agent — no model setup
 of eno's own required.
 
-### With the LLM extra (`pip install eno[llm]`)
+### With the LLM extra (`pip install enowiki[llm]`)
 
 **`eno fold`** — distills a date range or a topic (by wikilink, folder, or tag)
 into a structured, cited rollup note, with supersession metadata and
@@ -79,7 +82,7 @@ never an auto-merge.
 Both route through [somm](https://github.com/lavallee/somm), which owns
 provider selection and is local-first by default. eno itself makes no
 assumption about a model runtime — call these without the extra installed and
-you get a clean `pip install eno[llm]` hint, not a crash.
+you get a clean `pip install enowiki[llm]` hint, not a crash.
 
 ## Configuration
 

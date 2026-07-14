@@ -4,10 +4,10 @@ requires-python = ">=3.12"
 
 [manifest]
 members = [
-    "eno",
     "eno-mcp",
     "eno-service",
     "eno-workspace",
+    "enowiki",
 ]
 
 [[package]]
@@ -191,37 +191,17 @@ wheels = [
 ]
 
 [[package]]
-name = "eno"
-version = "0.1.0"
-source = { editable = "packages/eno" }
-dependencies = [
-    { name = "pyyaml" },
-]
-
-[package.optional-dependencies]
-llm = [
-    { name = "somm" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "pyyaml", specifier = ">=6.0" },
-    { name = "somm", marker = "extra == 'llm'", specifier = ">=0.2" },
-]
-provides-extras = ["llm"]
-
-[[package]]
 name = "eno-mcp"
 version = "0.1.0"
 source = { editable = "packages/eno-mcp" }
 dependencies = [
-    { name = "eno" },
+    { name = "enowiki" },
     { name = "mcp" },
 ]
 
 [package.metadata]
 requires-dist = [
-    { name = "eno", editable = "packages/eno" },
+    { name = "enowiki", editable = "packages/eno" },
     { name = "mcp", specifier = ">=1.2" },
 ]
 
@@ -230,7 +210,7 @@ name = "eno-service"
 version = "0.1.0"
 source = { editable = "packages/eno-service" }
 dependencies = [
-    { name = "eno" },
+    { name = "enowiki" },
     { name = "fastapi" },
     { name = "uvicorn" },
 ]
@@ -242,7 +222,7 @@ test = [
 
 [package.metadata]
 requires-dist = [
-    { name = "eno", editable = "packages/eno" },
+    { name = "enowiki", editable = "packages/eno" },
     { name = "fastapi", specifier = ">=0.115" },
     { name = "httpx", marker = "extra == 'test'", specifier = ">=0.27" },
     { name = "uvicorn", specifier = ">=0.30" },
@@ -269,6 +249,26 @@ dev = [
     { name = "pytest", specifier = ">=8.0" },
     { name = "ruff", specifier = ">=0.6" },
 ]
+
+[[package]]
+name = "enowiki"
+version = "0.1.0"
+source = { editable = "packages/eno" }
+dependencies = [
+    { name = "pyyaml" },
+]
+
+[package.optional-dependencies]
+llm = [
+    { name = "somm" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pyyaml", specifier = ">=6.0" },
+    { name = "somm", marker = "extra == 'llm'", specifier = ">=0.2" },
+]
+provides-extras = ["llm"]
 
 [[package]]
 name = "fastapi"

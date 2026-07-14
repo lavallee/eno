@@ -4,7 +4,7 @@ Complements `garden.find_duplicates` (title-based) with a body-content
 similarity axis. Borrowed from claude-obsidian's DragonScale Mechanism 3,
 reshaped to live inside eno's package.
 
-Requires the optional LLM extra (`pip install eno[llm]`): embeddings route
+Requires the optional LLM extra (`pip install enowiki[llm]`): embeddings route
 through `somm.embed()`, which owns provider selection and is local-first by
 default. eno itself makes no assumption about a model runtime.
 
@@ -154,7 +154,7 @@ def _embed_via_somm(model: str) -> Callable[[str], tuple[list[float], str | None
     except ImportError as e:
         raise ImportError(
             "eno tiling requires the LLM extra. Install it with:\n"
-            "    pip install eno[llm]"
+            "    pip install enowiki[llm]"
         ) from e
 
     # Silence somm's default stderr alerter — we already aggregate failures

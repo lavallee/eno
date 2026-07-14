@@ -11,7 +11,7 @@ Borrows the discipline of claude-obsidian's wiki-fold (DragonScale Mechanism 1):
 Supports flat time-range folds, topic-driven folds (wikilink/folder/tag),
 supersession metadata, and fold-of-folds level stacking.
 
-Requires the optional LLM extra (`pip install eno[llm]`). Synthesis routes
+Requires the optional LLM extra (`pip install enowiki[llm]`). Synthesis routes
 through somm, which owns provider selection. Privacy: registers the somm
 workload as `privacy_class=PRIVATE`, restricting it to sovereign/local
 providers so vault prose never leaves the machine.
@@ -755,7 +755,7 @@ def _default_synth(model: str = DEFAULT_FOLD_MODEL) -> Callable[[str, str], tupl
     except ImportError as e:
         raise ImportError(
             "eno fold requires the LLM extra. Install it with:\n"
-            "    pip install eno[llm]"
+            "    pip install enowiki[llm]"
         ) from e
 
     client = llm(project="eno_fold")

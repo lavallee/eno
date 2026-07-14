@@ -10,13 +10,13 @@ members = ["packages/*"]
 exclude = ["packages/eno-plugin"]  # TypeScript package, not a Python member
 
 [tool.uv.sources]
-eno = { workspace = true }
+enowiki = { workspace = true }
 eno-service = { workspace = true }
 eno-mcp = { workspace = true }
 # Future workspace members; uncomment as packages land.
 # eno-skill = { workspace = true }
 # eno-agent = { workspace = true }
-# somm is pulled from PyPI by the `eno[llm]` extra (fold + tiling). It is NOT a
+# somm is pulled from PyPI by the `enowiki[llm]` extra (fold + tiling). It is NOT a
 # workspace/path source: a published checkout must resolve it like any other
 # third-party dependency.
 

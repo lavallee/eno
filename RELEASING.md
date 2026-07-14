@@ -1,8 +1,12 @@
 # Releasing eno
 
-eno is a `uv` workspace of four packages. The three Python packages (`eno`,
-`eno-mcp`, `eno-service`) and the Obsidian plugin (`eno-plugin`) all carry the
-**same version number and move in lockstep** — never bump one independently.
+eno is a `uv` workspace of four packages. The three Python packages —
+`enowiki` (the core; imports as `eno`), `eno-mcp`, and `eno-service` — and the
+Obsidian plugin (`eno-plugin`) all carry the **same version number and move in
+lockstep** — never bump one independently.
+
+> The core's PyPI distribution is **`enowiki`** because the bare `eno` name was
+> already taken; its import package (`src/eno`) and CLI stay `eno`.
 
 ## Version locations (bump all together)
 

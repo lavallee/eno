@@ -77,7 +77,7 @@ answers most questions without burning budget on full bodies.
 - `eno_hygiene()` — frontmatter contract violations
 - `eno_health()` — diagnostic only
 
-**Body-content analysis (requires the `eno[llm]` extra):**
+**Body-content analysis (requires the `enowiki[llm]` extra):**
 - `eno_tiling(...)` — semantic dedup. Before writing on a topic, check
   whether similar material already exists across notes.
 

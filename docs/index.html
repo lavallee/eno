@@ -41,7 +41,7 @@
         no phone-home.
       </p>
 
-<pre class="code"><span class="prompt">$</span> pip install eno
+<pre class="code"><span class="prompt">$</span> pip install enowiki
 <span class="prompt">$</span> export ENO_VAULT_DIR=~/vault
 <span class="prompt">$</span> eno index
 <span class="prompt">$</span> eno hygiene
@@ -121,13 +121,14 @@
       <h2>Install</h2>
 
 <pre class="code"><span class="c"># structural core + `eno` CLI — no LLM dependency:</span>
-<span class="prompt">$</span> pip install eno
+<span class="c"># (PyPI package is `enowiki`; the command is `eno`)</span>
+<span class="prompt">$</span> pip install enowiki
 
 <span class="c"># MCP server for coding agents, and the HTTP service:</span>
 <span class="prompt">$</span> pip install eno-mcp eno-service
 
 <span class="c"># + local-first distillation & semantic dedup (fold, tiling):</span>
-<span class="prompt">$</span> pip install eno[llm]</pre>
+<span class="prompt">$</span> pip install enowiki[llm]</pre>
 
       <p class="section-lede">
         Python 3.12+. Point eno at your vault with <code>--vault PATH</code>
@@ -184,7 +185,7 @@
     <div class="wrap">
       <h2>fold &amp; tiling — the LLM extra</h2>
       <p class="section-lede">
-        <code>pip install eno[llm]</code> adds two local-first
+        <code>pip install enowiki[llm]</code> adds two local-first
         intelligence features. Both route through
         <a href="https://github.com/lavallee/somm">somm</a>; eno itself
         makes no assumption about a model runtime, and calling them

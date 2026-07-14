@@ -5,7 +5,7 @@ description = "eno-mcp — MCP stdio server exposing the vault's read tools to c
 requires-python = ">=3.12"
 license = { text = "MIT" }
 dependencies = [
-    "eno==0.1.0",
+    "enowiki==0.1.0",  # the core package (imports as `eno`)
     "mcp>=1.2",
 ]
 

@@ -5,7 +5,7 @@ description = "eno-service — FastAPI face on eno's read endpoints"
 requires-python = ">=3.12"
 license = { text = "MIT" }
 dependencies = [
-    "eno==0.1.0",
+    "enowiki==0.1.0",  # the core package (imports as `eno`)
     "fastapi>=0.115",
     "uvicorn>=0.30",
 ]
