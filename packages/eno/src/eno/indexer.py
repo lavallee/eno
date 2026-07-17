@@ -6,6 +6,7 @@ import time
 from dataclasses import asdict, dataclass
 from pathlib import Path, PurePosixPath
 
+from . import flip_conventions
 from .config import index_path, state_path
 from .db import open_index
 from .parser import ParsedNote, parse_note
@@ -23,6 +24,9 @@ class IndexStats:
     deleted: int = 0
     links_resolved: int = 0
     links_broken: int = 0
+    flip_bundles: int = 0
+    flip_handles: int = 0
+    flip_id_collisions: int = 0
     elapsed_s: float = 0.0
 
 
@@ -61,7 +65,11 @@ def index_vault(vault: Path, *, full: bool = False) -> IndexStats:
             db.execute("DELETE FROM notes WHERE path = ?", (old_path,))
             stats.deleted += 1
 
-        resolved, broken = _resolve_links(db)
+        bundles, handles, handle_map = _annotate_flip(db, vault)
+        stats.flip_bundles = bundles
+        stats.flip_handles = handles
+
+        resolved, broken = _resolve_links(db, handle_map, stats)
         stats.links_resolved = resolved
         stats.links_broken = broken
 
@@ -117,9 +125,12 @@ def _upsert_note(db: sqlite3.Connection, note: ParsedNote, mtime: float) -> None
         )
     if note.links:
         db.executemany(
-            "INSERT INTO links (src_path, target_text, target_path, alias, line_no) "
-            "VALUES (?, ?, NULL, ?, ?)",
-            [(note.path, link.target_text, link.alias, link.line_no) for link in note.links],
+            "INSERT INTO links (src_path, target_text, target_path, target_anchor, alias, line_no) "
+            "VALUES (?, ?, NULL, ?, ?, ?)",
+            [
+                (note.path, link.target_text, link.anchor, link.alias, link.line_no)
+                for link in note.links
+            ],
         )
     if note.tags:
         db.executemany(
@@ -137,8 +148,89 @@ def _str_or_none(v) -> str | None:
     return None if v is None else str(v)
 
 
-def _resolve_links(db: sqlite3.Connection) -> tuple[int, int]:
-    """Resolve link target_text → target_path. Strategy: literal path → basename → alias."""
+def _annotate_flip(db: sqlite3.Connection, vault: Path) -> tuple[int, int, dict[str, str]]:
+    """Detect flip bundle roots and annotate notes with bundle_path/bundle_handle/flip_id.
+
+    Returns (bundle_count, handle_count, handle -> bundle_path map). Bundle roots
+    come from the DB (frontmatter_json), not the filesystem, so unchanged notes
+    are covered on incremental runs. bundle_path AND flip_id are recomputed for
+    ALL notes each run (handles bundle-root creation/deletion without touching
+    entity notes). flip_id is only meaningful INSIDE a bundle: an `id: Q4` in
+    frontmatter outside any bundle stays NULL, so flip-free vaults carry no
+    flip_id rows at all. No-op on flip-free vaults.
+    """
+    fms: dict[str, dict] = {}
+    bundle_dirs: list[str] = []
+    for path, fm_json in db.execute("SELECT path, frontmatter_json FROM notes").fetchall():
+        try:
+            fm = json.loads(fm_json) or {}
+        except json.JSONDecodeError:
+            fm = {}
+        if not isinstance(fm, dict):
+            fm = {}
+        fms[path] = fm
+        if (
+            path == "index.md" or path.endswith("/index.md")
+        ) and flip_conventions.is_bundle_root(fm):
+            bundle_dirs.append(path[: -len("index.md")].rstrip("/"))  # "" = vault root
+
+    if not bundle_dirs:
+        db.execute(
+            "UPDATE notes SET bundle_path = NULL, bundle_handle = NULL, flip_id = NULL "
+            "WHERE bundle_path IS NOT NULL OR bundle_handle IS NOT NULL OR flip_id IS NOT NULL"
+        )
+        return 0, 0, {}
+
+    # Longest-prefix (nearest ancestor) wins for nested bundles.
+    bundle_dirs.sort(key=len, reverse=True)
+    updates: list[tuple[str | None, str | None, str]] = []
+    for path, fm in fms.items():
+        bundle = _containing_bundle(path, bundle_dirs)
+        flip_id = flip_conventions.extract_flip_id(fm) if bundle is not None else None
+        updates.append((bundle, flip_id, path))
+    db.executemany(
+        "UPDATE notes SET bundle_path = ?, flip_id = ?, bundle_handle = NULL WHERE path = ?",
+        updates,
+    )
+
+    # Workspace handle table — the one piece of I/O in flip awareness.
+    handle_map: dict[str, str] = {}
+    try:
+        text = (vault / ".flip" / "workspace.toml").read_text(encoding="utf-8")
+    except (OSError, UnicodeDecodeError):
+        text = ""
+    if text:
+        parsed = flip_conventions.parse_workspace_toml(text)
+        bundle_set = set(bundle_dirs)
+        handle_map = {h: p for h, p in parsed.items() if p in bundle_set}
+
+    # Bind one handle per bundle path; lexicographically smallest wins.
+    handle_by_bundle: dict[str, str] = {}
+    for handle in sorted(handle_map):
+        handle_by_bundle.setdefault(handle_map[handle], handle)
+    if handle_by_bundle:
+        db.executemany(
+            "UPDATE notes SET bundle_handle = ? WHERE bundle_path = ?",
+            [(h, bp) for bp, h in handle_by_bundle.items()],
+        )
+    return len(bundle_dirs), len(handle_map), handle_map
+
+
+def _containing_bundle(path: str, bundle_dirs_longest_first: list[str]) -> str | None:
+    for d in bundle_dirs_longest_first:
+        if d == "" or path.startswith(d + "/"):
+            return d
+    return None
+
+
+def _resolve_links(
+    db: sqlite3.Connection, handle_map: dict[str, str], stats: IndexStats
+) -> tuple[int, int]:
+    """Resolve link target_text → target_path.
+
+    Strategy: literal path → basename → bundle-scoped flip id → workspace-qualified
+    flip id → alias. The two flip steps are no-ops on flip-free vaults (empty maps).
+    """
     note_paths = [row[0] for row in db.execute("SELECT path FROM notes")]
     paths_set = set(note_paths)
     paths_lower = {p.lower(): p for p in note_paths}
@@ -151,11 +243,37 @@ def _resolve_links(db: sqlite3.Connection) -> tuple[int, int]:
     for path, alias in db.execute("SELECT path, alias FROM aliases"):
         alias_map.setdefault(alias.lower(), path)
 
+    bundle_by_src: dict[str, str] = dict(
+        db.execute("SELECT path, bundle_path FROM notes WHERE bundle_path IS NOT NULL")
+    )
+    flip_id_map: dict[tuple[str, str], str] = {}
+    for path, bundle_path, flip_id in db.execute(
+        "SELECT path, bundle_path, flip_id FROM notes "
+        "WHERE flip_id IS NOT NULL AND bundle_path IS NOT NULL ORDER BY path"
+    ):
+        key = (bundle_path, flip_id)
+        if key in flip_id_map:  # same id twice in one bundle: first wins by path sort
+            stats.flip_id_collisions += 1
+            continue
+        flip_id_map[key] = path
+
     resolved = 0
     broken = 0
     updates: list[tuple[str | None, int]] = []
-    for rowid, target_text in db.execute("SELECT rowid, target_text FROM links").fetchall():
-        target = _resolve_one(target_text, paths_set, paths_lower, basename_map, alias_map)
+    for rowid, src_path, target_text, anchor in db.execute(
+        "SELECT rowid, src_path, target_text, target_anchor FROM links"
+    ).fetchall():
+        target = _resolve_one(
+            target_text,
+            anchor,
+            bundle_by_src.get(src_path),
+            paths_set,
+            paths_lower,
+            basename_map,
+            alias_map,
+            flip_id_map,
+            handle_map,
+        )
         updates.append((target, rowid))
         if target:
             resolved += 1
@@ -167,10 +285,14 @@ def _resolve_links(db: sqlite3.Connection) -> tuple[int, int]:
 
 def _resolve_one(
     target_text: str,
+    anchor: str | None,
+    src_bundle: str | None,
     paths_set: set[str],
     paths_lower: dict[str, str],
     basename_map: dict[str, str],
     alias_map: dict[str, str],
+    flip_id_map: dict[tuple[str, str], str],
+    handle_map: dict[str, str],
 ) -> str | None:
     candidate = target_text if target_text.endswith(".md") else f"{target_text}.md"
     if candidate in paths_set:
@@ -180,6 +302,20 @@ def _resolve_one(
     key = PurePosixPath(target_text).stem.lower()
     if key in basename_map:
         return basename_map[key]
+    # Bare flip id, bundle-scoped. Deliberately BEFORE the vault-wide alias map:
+    # entity pages carry their bare id as an alias, and the alias map is
+    # first-wins — two bundles both holding an A1 would otherwise cross-resolve.
+    # TERMINAL for id-shaped targets inside a bundle: an id the bundle lacks is
+    # unresolved, never a cross-bundle guess through the alias map. ("is not
+    # None" keeps the vault-root-as-bundle case, src_bundle == "", truthy-safe.)
+    if src_bundle is not None and flip_conventions.FLIP_ID_RE.match(target_text):
+        return flip_id_map.get((src_bundle, target_text))
+    # Qualified: [[handle:A3]] or the deprecated [[handle#A3]] (via the anchor).
+    q = flip_conventions.split_qualified(target_text, anchor)
+    if q is not None and q[0] in handle_map:
+        hit = flip_id_map.get((handle_map[q[0]], q[1]))
+        if hit:
+            return hit
     if target_text.lower() in alias_map:
         return alias_map[target_text.lower()]
     return None

@@ -120,6 +120,45 @@ def test_drift_returns_fuzzy_matches(tmp_path: Path, monkeypatch):
     assert out["drift"][0]["suggested_path"] == "Real Note.md"
 
 
+@pytest.fixture()
+def flip_vault(tmp_path: Path, monkeypatch) -> Path:
+    bundle = tmp_path / "research" / "hosm"
+    (bundle / "references").mkdir(parents=True)
+    (bundle / "index.md").write_text('---\nokf_version: "0.4"\nflip: "0.4"\n---\n# HOSM\n')
+    (bundle / "references" / "paper.md").write_text(
+        "---\nid: A1\naliases: [A1]\n---\n# Paper\n\n[[Q9]] [[Some Concept]]\n"
+    )
+    (tmp_path / ".flip").mkdir()
+    (tmp_path / ".flip" / "workspace.toml").write_text('[notebooks]\nhosm = "research/hosm"\n')
+    monkeypatch.setenv("ENO_VAULT_DIR", str(tmp_path))
+    monkeypatch.setenv("ENO_DIR", str(tmp_path / ".eno"))
+    monkeypatch.delenv("ENO_SERVICE_URL", raising=False)
+    index_vault(tmp_path)
+    return tmp_path
+
+
+def test_eno_note_returns_flip_fields(flip_vault):
+    out = tools.eno_note("research/hosm/references/paper.md")
+    assert out["flip_id"] == "A1"
+    assert out["bundle_path"] == "research/hosm"
+    assert out["bundle_handle"] == "hosm"
+    # Plain notes on flip-free vaults keep the keys, null-valued (additive shape).
+
+
+def test_eno_note_flip_fields_null_on_plain_vault(vault):
+    out = tools.eno_note("Alpha.md")
+    assert out["flip_id"] is None
+    assert out["bundle_path"] is None
+    assert out["bundle_handle"] is None
+
+
+def test_eno_concepts_excludes_flip_refs(flip_vault):
+    out = tools.eno_concepts()
+    targets = [c["target_text"] for c in out["concepts"]]
+    assert "Some Concept" in targets
+    assert "Q9" not in targets  # id-shaped ref on a flip vault: flip ref, not concept
+
+
 def test_concepts_limit_respected(vault):
     out = tools.eno_concepts(limit=0)
     assert out["concepts"] == []

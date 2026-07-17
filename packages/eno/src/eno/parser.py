@@ -31,6 +31,7 @@ class Wikilink:
     target_text: str
     alias: str | None
     line_no: int
+    anchor: str | None = None  # the `#fragment` (trailing `^block` stripped)
 
 
 @dataclass
@@ -105,11 +106,17 @@ def _scan_lines(body: str) -> tuple[list[Heading], list[Wikilink]]:
         for m in WIKILINK_RE.finditer(line):
             target = m.group(1).strip()
             alias = m.group(2).strip() if m.group(2) else None
-            # Strip section anchor (#) and block ref (^) for resolution; keep raw for display.
+            # Strip section anchor (#) and block ref (^) for resolution; the anchor
+            # is kept separately (with any trailing `^block` stripped).
             target_clean = target.split("#", 1)[0].split("^", 1)[0].strip()
             if not target_clean:
                 continue
-            links.append(Wikilink(target_text=target_clean, alias=alias, line_no=line_no))
+            anchor = None
+            if "#" in target:
+                anchor = target.split("#", 1)[1].split("^", 1)[0].strip() or None
+            links.append(
+                Wikilink(target_text=target_clean, alias=alias, line_no=line_no, anchor=anchor)
+            )
     return headings, links
 
 

@@ -74,8 +74,10 @@ def eno_note(path: str, with_excerpt: bool = True) -> dict[str, Any]:
         with_excerpt: include ~400 chars of body. Default True.
 
     Returns:
-        {"path", "title", "word_count", "frontmatter", "headings", "excerpt"}
-        on success; {"note": null, "hint": "..."} if missing;
+        {"path", "title", "word_count", "frontmatter", "headings", "excerpt",
+        "flip_id", "bundle_path", "bundle_handle"} on success (the last three
+        are null unless the note is a flip entity page / lives in a flip
+        bundle); {"note": null, "hint": "..."} if missing;
         {"error": "...", "hint": "..."} on backend failure.
     """
     try:
@@ -205,7 +207,9 @@ def eno_broken_links(limit: int = 50) -> dict[str, Any]:
     matches an existing note (em-dash vs hyphen, casing, trailing
     punctuation) and silently doesn't resolve. This raw list mixes both
     incipient and drift; the gardener (step 5) is what classifies them.
-    Don't pre-classify yourself, and don't frame these as errors.
+    Don't pre-classify yourself, and don't frame these as errors. On vaults
+    with flip bundles, id-shaped references (`A3`, `handle:A3`) are
+    classified separately by the gardener as flip refs, not concepts.
 
     Use this when investigating link integrity, when the user asks about
     "concepts I've gestured at but haven't written," or when looking for
@@ -419,7 +423,9 @@ def eno_concepts(limit: int = 30) -> dict[str, Any]:
 
     POSTURE: these are NOT broken-link errors. They're intentional
     groundwork for notes-not-yet-written. Frame them as opportunities,
-    never as bugs to fix.
+    never as bugs to fix. On vaults with flip bundles, id-shaped flip
+    references (`A3`, `handle:A3`) are excluded here — they classify
+    separately as flip refs.
 
     Args:
         limit: cap on returned concepts. Default 30 — sorted by

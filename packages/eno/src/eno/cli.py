@@ -330,10 +330,13 @@ def _cmd_index(args) -> int:
     if args.json:
         print(json.dumps(asdict(stats), indent=2))
     else:
+        # The flip segment appears only on flip vaults — flip-free output unchanged.
+        flip_segment = f", {stats.flip_bundles} flip bundles" if stats.flip_bundles > 0 else ""
         print(
             f"indexed {stats.parsed} of {stats.seen} notes "
             f"({stats.skipped_unchanged} unchanged, {stats.deleted} deleted) "
-            f"— {stats.links_resolved} links resolved, {stats.links_broken} broken "
+            f"— {stats.links_resolved} links resolved, {stats.links_broken} broken"
+            f"{flip_segment} "
             f"in {stats.elapsed_s:.2f}s"
         )
     return 0
@@ -805,6 +808,8 @@ def _print_garden_summary(report) -> None:
     print(f"  resurfacing:        {len(report.resurfacing)}")
     print(f"  concept candidates: {len(report.concepts)}")
     print(f"  drift candidates:   {len(report.drift)}")
+    if report.flip_refs:
+        print(f"  flip refs:          {len(report.flip_refs)}")
     print(f"  duplicates:         {len(report.duplicates)}")
     print(f"  stubs:              {len(report.stubs)}")
     print(f"  stale:              {len(report.stale)}")

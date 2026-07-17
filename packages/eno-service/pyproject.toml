@@ -1,12 +1,12 @@
 [project]
 name = "eno-service"
-version = "0.1.1"
+version = "0.2.0"
 description = "eno-service — FastAPI face on eno's read endpoints"
 readme = "README.md"
 requires-python = ">=3.12"
 license = { text = "MIT" }
 dependencies = [
-    "enowiki==0.1.1",  # the core package (imports as `eno`)
+    "enowiki==0.2.0",  # the core package (imports as `eno`)
     "fastapi>=0.115",
     "uvicorn>=0.30",
 ]

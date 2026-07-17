@@ -191,6 +191,43 @@ def test_append_to_note_endpoint(vault: Path, client: TestClient):
     assert "new line via service" in (vault / "Beta.md").read_text()
 
 
+def test_note_endpoint_includes_flip_fields(tmp_path: Path, monkeypatch):
+    bundle = tmp_path / "research" / "hosm"
+    (bundle / "references").mkdir(parents=True)
+    (bundle / "index.md").write_text('---\nokf_version: "0.4"\nflip: "0.4"\n---\n# HOSM\n')
+    (bundle / "references" / "paper.md").write_text("---\nid: A1\naliases: [A1]\n---\n# Paper\n")
+    (tmp_path / ".flip").mkdir()
+    (tmp_path / ".flip" / "workspace.toml").write_text('[notebooks]\nhosm = "research/hosm"\n')
+    monkeypatch.setenv("ENO_VAULT_DIR", str(tmp_path))
+    monkeypatch.setenv("ENO_DIR", str(tmp_path / ".eno"))
+    index_vault(tmp_path)
+    client = TestClient(create_app())
+
+    r = client.get("/note", params={"path": "research/hosm/references/paper.md"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["flip_id"] == "A1"
+    assert body["bundle_path"] == "research/hosm"
+    assert body["bundle_handle"] == "hosm"
+
+
+def test_note_endpoint_flip_fields_null_on_plain_vault(client: TestClient):
+    r = client.get("/note", params={"path": "Alpha.md"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["flip_id"] is None
+    assert body["bundle_path"] is None
+    assert body["bundle_handle"] is None
+
+
+def test_garden_endpoint_includes_flip_refs(client: TestClient):
+    r = client.post("/garden", json={})
+    assert r.status_code == 200
+    body = r.json()
+    assert "flip_refs" in body
+    assert body["flip_refs"] == []  # plain fixture vault has no flip bundles
+
+
 def test_hygiene_apply(vault: Path, client: TestClient):
     proposals = [
         {

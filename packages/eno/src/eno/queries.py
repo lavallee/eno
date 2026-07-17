@@ -57,7 +57,8 @@ def search(
 
 def note(db: sqlite3.Connection, path: str) -> NoteView | None:
     row = db.execute(
-        "SELECT path, title, word_count, frontmatter_json FROM notes WHERE path = ?",
+        "SELECT path, title, word_count, frontmatter_json, flip_id, bundle_path, bundle_handle "
+        "FROM notes WHERE path = ?",
         (path,),
     ).fetchone()
     if not row:
@@ -79,6 +80,9 @@ def note(db: sqlite3.Connection, path: str) -> NoteView | None:
         word_count=row[2],
         frontmatter=fm,
         headings=headings,
+        flip_id=row[4],
+        bundle_path=row[5],
+        bundle_handle=row[6],
     )
 
 

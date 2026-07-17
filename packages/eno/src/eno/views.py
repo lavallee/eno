@@ -41,6 +41,9 @@ class NoteView:
     frontmatter: dict
     headings: list[HeadingView] = field(default_factory=list)
     excerpt: str | None = None
+    flip_id: str | None = None
+    bundle_path: str | None = None
+    bundle_handle: str | None = None
 
 
 @dataclass
@@ -106,6 +109,18 @@ class ConceptCandidate:
     target_text: str
     sources: list[dict] = field(default_factory=list)
     mention_count: int = 0
+
+
+@dataclass
+class FlipRefCandidate:
+    """A broken wikilink shaped like a flip entity reference (bare `A3`,
+    qualified `hosm:A3`, or the deprecated `hosm#A3`) on a vault that has
+    flip bundles. Neither a drift bug nor a concept gesture — an entity
+    reference that didn't resolve; the hint says why it likely failed."""
+    target_text: str          # display form: "A3", "hosm:A3", "hosm#A3"
+    sources: list[dict] = field(default_factory=list)
+    mention_count: int = 0
+    hint: str = ""
 
 
 @dataclass
@@ -263,4 +278,5 @@ class GardenReport:
     stubs: list[NoteRef] = field(default_factory=list)
     stale: list[NoteRef] = field(default_factory=list)
     duplicates: list[DuplicatePair] = field(default_factory=list)
+    flip_refs: list[FlipRefCandidate] = field(default_factory=list)
     stats: dict = field(default_factory=dict)

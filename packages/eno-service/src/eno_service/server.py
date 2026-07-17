@@ -18,6 +18,8 @@ from eno.views import Proposal
 from fastapi import FastAPI, HTTPException, Query
 from pydantic import BaseModel
 
+from eno_service import __version__
+
 
 @contextmanager
 def _db():
@@ -29,7 +31,7 @@ def _db():
 
 
 def create_app() -> FastAPI:
-    app = FastAPI(title="eno-service", version="0.0.1")
+    app = FastAPI(title="eno-service", version=__version__)
 
     @app.get("/health")
     def health():

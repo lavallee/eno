@@ -69,6 +69,24 @@ def test_wikilink_section_anchor_stripped_for_target():
     assert [link.target_text for link in note.links] == ["Other", "Other"]
 
 
+def test_wikilink_anchor_captured():
+    raw = "# X\n\nsee [[Other#Section]] and [[Plain]]"
+    note = parse_note("x.md", raw)
+    assert note.links[0].target_text == "Other"
+    assert note.links[0].anchor == "Section"
+    assert note.links[1].anchor is None
+
+
+def test_wikilink_block_ref_stripped_from_anchor():
+    raw = "# X\n\nsee [[Other#Section^blk]] and [[Other^blk]]"
+    note = parse_note("x.md", raw)
+    assert note.links[0].target_text == "Other"
+    assert note.links[0].anchor == "Section"
+    # Pure block ref: no '#', so no anchor.
+    assert note.links[1].target_text == "Other"
+    assert note.links[1].anchor is None
+
+
 def test_word_count_strips_code_and_heading_markers():
     raw = "# Title\n\nfoo bar\n\n```\nthis should not count\n```\n\nbaz qux"
     note = parse_note("x.md", raw)

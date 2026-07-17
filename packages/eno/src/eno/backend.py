@@ -27,6 +27,7 @@ from .views import (
     ConceptCandidate,
     DriftCandidate,
     DuplicatePair,
+    FlipRefCandidate,
     FrontierNote,
     GardenReport,
     HeadingView,
@@ -338,6 +339,9 @@ def _hydrate_note_view(data: dict) -> NoteView:
         frontmatter=data.get("frontmatter", {}) or {},
         headings=[HeadingView(**h) for h in data.get("headings", []) or []],
         excerpt=data.get("excerpt"),
+        flip_id=data.get("flip_id"),
+        bundle_path=data.get("bundle_path"),
+        bundle_handle=data.get("bundle_handle"),
     )
 
 
@@ -400,5 +404,7 @@ def _hydrate_garden_report(data: dict) -> GardenReport:
         stubs=[NoteRef(**s) for s in data.get("stubs", []) or []],
         stale=[NoteRef(**s) for s in data.get("stale", []) or []],
         duplicates=[DuplicatePair(**p) for p in data.get("duplicates", []) or []],
+        # .get default keeps payloads from pre-flip services compatible.
+        flip_refs=[FlipRefCandidate(**f) for f in data.get("flip_refs", []) or []],
         stats=data.get("stats", {}) or {},
     )

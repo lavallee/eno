@@ -1,8 +1,6 @@
 import os
 from pathlib import Path
 
-SCHEMA_VERSION = 1
-
 
 class VaultNotConfigured(RuntimeError):
     """Raised when no vault path was given via --vault or $ENO_VAULT_DIR."""

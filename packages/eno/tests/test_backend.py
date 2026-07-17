@@ -86,6 +86,58 @@ def test_local_backend_append_reindexes(tmp_path: Path):
     assert view.word_count >= 4  # X + first + appended + content
 
 
+def test_hydrate_note_view_flip_fields():
+    from eno.backend import _hydrate_note_view
+
+    view = _hydrate_note_view(
+        {
+            "path": "research/hosm/claims/claim-one.md",
+            "title": "Claim One",
+            "word_count": 5,
+            "frontmatter": {"id": "C1"},
+            "headings": [],
+            "flip_id": "C1",
+            "bundle_path": "research/hosm",
+            "bundle_handle": "hosm",
+        }
+    )
+    assert view.flip_id == "C1"
+    assert view.bundle_path == "research/hosm"
+    assert view.bundle_handle == "hosm"
+    # Old-service payloads without the keys default to None.
+    bare = _hydrate_note_view({"path": "A.md", "title": "A"})
+    assert bare.flip_id is None and bare.bundle_path is None and bare.bundle_handle is None
+
+
+def test_hydrate_garden_report_with_flip_refs():
+    from eno.backend import _hydrate_garden_report
+
+    report = _hydrate_garden_report(
+        {
+            "generated_at": "now",
+            "flip_refs": [
+                {
+                    "target_text": "front:T9",
+                    "sources": [{"src_path": "X.md", "line_no": 3}],
+                    "mention_count": 1,
+                    "hint": "no entity T9 indexed in bundle 'front'",
+                }
+            ],
+        }
+    )
+    assert len(report.flip_refs) == 1
+    assert report.flip_refs[0].target_text == "front:T9"
+    assert report.flip_refs[0].hint == "no entity T9 indexed in bundle 'front'"
+
+
+def test_hydrate_garden_report_missing_flip_refs_key_defaults_empty():
+    """Payloads from a pre-flip eno-service hydrate cleanly."""
+    from eno.backend import _hydrate_garden_report
+
+    report = _hydrate_garden_report({"generated_at": "now"})
+    assert report.flip_refs == []
+
+
 def test_service_backend_hydrates_dataclasses(monkeypatch):
     """Inject a fake client to confirm dict→dataclass hydration is correct."""
     backend = ServiceBackend("http://x")

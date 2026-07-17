@@ -1,6 +1,6 @@
 [project]
 name = "eno-workspace"
-version = "0.1.1"
+version = "0.2.0"
 description = "eno — structural intelligence layer for an Obsidian vault (workspace root)"
 authors = [{ name = "Marc Lavallee" }]
 requires-python = ">=3.12"

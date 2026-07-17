@@ -359,6 +359,53 @@ def test_hot_aggregates_signals(tmp_path):
     assert agent_paths == ["Synthesis.md"]
 
 
+def test_note_view_carries_flip_fields(flip_vault):
+    index_vault(flip_vault)
+    db = _open(flip_vault)
+    view = queries.note(db, "research/hosm/claims/claim-one.md")
+    assert view is not None
+    assert view.flip_id == "C1"
+    assert view.bundle_path == "research/hosm"
+    assert view.bundle_handle == "hosm"
+
+
+def test_note_view_flip_fields_none_on_plain_vault(tmp_path):
+    # X.md carries `id: Q4` frontmatter — but flip_id is only meaningful inside
+    # a bundle, so on a flip-free vault the note view must still return None.
+    _write(tmp_path, "X.md", "---\nid: Q4\n---\n# X\n")
+    index_vault(tmp_path)
+    db = _open(tmp_path)
+    view = queries.note(db, "X.md")
+    assert view is not None
+    assert view.flip_id is None
+    assert view.bundle_path is None
+    assert view.bundle_handle is None
+
+
+def test_hot_top_concepts_exclude_flip_refs(flip_vault):
+    _write(flip_vault, "Ideas.md", "# Ideas\n\n[[Mechanism Design]]\n")
+    index_vault(flip_vault)
+    db = _open(flip_vault)
+    bundle = queries.hot(db)
+    targets = [c.target_text for c in bundle.top_concepts]
+    assert "Mechanism Design" in targets
+    # Id-shaped flip refs from the fixture never pollute top_concepts.
+    assert "A33" not in targets
+    assert "nope:A1" not in targets
+
+
+def test_hot_top_concepts_keep_id_shaped_on_flip_free_vault(tmp_path):
+    """On a flip-free vault, [[Q4]] is an ordinary concept even when some note
+    carries `id: Q4` frontmatter — hot's top_concepts must include it, exactly
+    as if the frontmatter weren't there."""
+    _write(tmp_path, "Quarter.md", "---\nid: Q4\n---\n# Quarter\n")
+    _write(tmp_path, "Other.md", "# Other\n\n[[Q4]]\n")
+    index_vault(tmp_path)
+    db = _open(tmp_path)
+    bundle = queries.hot(db)
+    assert "Q4" in [c.target_text for c in bundle.top_concepts]
+
+
 def test_hygiene(tmp_path):
     _write(tmp_path, "Full.md", "---\norigin: human\nstage: active\n---\n# Full\n")
     _write(tmp_path, "Half.md", "---\norigin: llm\n---\n# Half\n")
