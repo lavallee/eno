@@ -15,6 +15,12 @@ import yaml
 FRONTMATTER_RE = re.compile(r"\A---\r?\n(.*?\r?\n)---\r?\n?", re.DOTALL)
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 WIKILINK_RE = re.compile(r"\[\[([^\]\|\n]+?)(?:\|([^\]\n]+?))?\]\]")
+# Standard markdown link [alias](target), optional "title" after the target.
+# The (?<!!) lookbehind skips image links; external schemes are filtered at
+# match time (MDLINK_EXTERNAL_RE), not here.
+MDLINK_RE = re.compile(r"(?<!!)\[([^\]\n]*)\]\(\s*([^()\s]+?)(?:\s+\"[^\"]*\")?\s*\)")
+MDLINK_EXTERNAL_RE = re.compile(r"^(?:[a-zA-Z][a-zA-Z0-9+.-]*:|//)")
+INLINE_CODE_RE = re.compile(r"`[^`\n]*`")
 INLINE_TAG_RE = re.compile(r"(?:^|[^\w&])#([A-Za-z][\w/-]*)")
 CODE_FENCE_RE = re.compile(r"^\s*```")
 
@@ -35,6 +41,19 @@ class Wikilink:
 
 
 @dataclass
+class MdLink:
+    """A standard markdown link [alias](target) — the OKF cross-linking form.
+
+    target_text is the path portion exactly as written (anchor split off);
+    resolution against the note's directory / bundle root is the indexer's job.
+    """
+    target_text: str
+    alias: str
+    line_no: int
+    anchor: str | None = None  # the `#fragment` after the path
+
+
+@dataclass
 class ParsedNote:
     path: str  # vault-relative, posix-style
     title: str
@@ -42,6 +61,7 @@ class ParsedNote:
     frontmatter: dict
     headings: list[Heading] = field(default_factory=list)
     links: list[Wikilink] = field(default_factory=list)
+    md_links: list[MdLink] = field(default_factory=list)
     tags: list[str] = field(default_factory=list)
     aliases: list[str] = field(default_factory=list)
     word_count: int = 0
@@ -50,7 +70,7 @@ class ParsedNote:
 
 def parse_note(rel_path: str, raw: str) -> ParsedNote:
     frontmatter, body = _split_frontmatter(raw)
-    headings, links = _scan_lines(body)
+    headings, links, md_links = _scan_lines(body)
     inline_tags = _parse_inline_tags(_strip_code_blocks(body))
     fm_tags = _frontmatter_list(frontmatter, ("tags",))
     fm_aliases = _frontmatter_list(frontmatter, ("aliases", "alias"))
@@ -68,6 +88,7 @@ def parse_note(rel_path: str, raw: str) -> ParsedNote:
         frontmatter=frontmatter,
         headings=headings,
         links=links,
+        md_links=md_links,
         tags=tags,
         aliases=fm_aliases,
         word_count=word_count,
@@ -88,10 +109,11 @@ def _split_frontmatter(raw: str) -> tuple[dict, str]:
     return fm, raw[m.end():]
 
 
-def _scan_lines(body: str) -> tuple[list[Heading], list[Wikilink]]:
-    """Single pass over body, tracking code fences. Headings + wikilinks together for efficiency."""
+def _scan_lines(body: str) -> tuple[list[Heading], list[Wikilink], list[MdLink]]:
+    """Single pass over body, tracking code fences. Headings + links together for efficiency."""
     headings: list[Heading] = []
     links: list[Wikilink] = []
+    md_links: list[MdLink] = []
     in_fence = False
     for line_no, line in enumerate(body.splitlines(), start=1):
         if CODE_FENCE_RE.match(line):
@@ -117,7 +139,38 @@ def _scan_lines(body: str) -> tuple[list[Heading], list[Wikilink]]:
             links.append(
                 Wikilink(target_text=target_clean, alias=alias, line_no=line_no, anchor=anchor)
             )
-    return headings, links
+        md_links.extend(_scan_md_links(line, line_no))
+    return headings, links, md_links
+
+
+def _scan_md_links(line: str, line_no: int) -> list[MdLink]:
+    """Markdown links on one (non-heading, non-fence) line.
+
+    Skipped, per OKF consumer rules: external schemes (http/mailto/…), image
+    links (`![…]`), links inside inline code spans, and pure-fragment targets
+    (`#section` — no cross-note edge). The path is stored exactly as written;
+    resolution is deliberately deferred to the indexer.
+    """
+    out: list[MdLink] = []
+    # Blank out inline code spans (span content dropped; only md-link matching
+    # reads this line copy, so offsets don't need preserving).
+    scannable = INLINE_CODE_RE.sub(" ", line)
+    for m in MDLINK_RE.finditer(scannable):
+        target = m.group(2).strip()
+        if not target or MDLINK_EXTERNAL_RE.match(target):
+            continue
+        path_part, _, fragment = target.partition("#")
+        if not path_part:
+            continue
+        out.append(
+            MdLink(
+                target_text=path_part,
+                alias=m.group(1).strip(),
+                line_no=line_no,
+                anchor=fragment.strip() or None,
+            )
+        )
+    return out
 
 
 def _parse_inline_tags(body: str) -> list[str]:

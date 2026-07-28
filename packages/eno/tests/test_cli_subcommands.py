@@ -238,3 +238,85 @@ def test_hygiene_propose_refuses_existing_without_force(tmp_path, capsys):
     assert rc == 2
     err = capsys.readouterr().err
     assert "already exists" in err
+
+
+# ---- OKF trust surface -----------------------------------------------------
+
+
+def _seed_okf(tmp_path: Path) -> None:
+    bundle = tmp_path / "bundle"
+    bundle.mkdir()
+    (bundle / "index.md").write_text('---\nokf_version: "0.2"\n---\n# Bundle\n')
+    (bundle / "metric.md").write_text(
+        "---\n"
+        "type: Metric\n"
+        "title: Parcel cost\n"
+        "status: stable\n"
+        "stale_after: 2020-01-01\n"
+        "generated: { by: costing_agent/v3, at: 2026-07-01T10:00:00Z }\n"
+        "verified: { by: human:rivera, at: 2026-06-10T09:00:00Z }\n"
+        "sources:\n"
+        "  - { id: policy, resource: /policy.md, title: Policy }\n"
+        "---\n"
+        "# Parcel cost\n\nDefined against [the policy](/policy.md).\n"
+    )
+    (bundle / "policy.md").write_text("---\ntype: Reference\n---\n# Policy\n")
+    main(["--vault", str(tmp_path), "index"])
+
+
+def test_note_prints_trust_line(tmp_path, capsys):
+    _seed_okf(tmp_path)
+    capsys.readouterr()
+    rc = main(["--vault", str(tmp_path), "note", "bundle/metric.md"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "trust: status: stable · generated 2026-07-01 by costing_agent/v3" in out
+    assert "verified ×1 (1 human)" in out
+    assert "stale 2020-01-01" in out
+
+
+def test_note_omits_trust_line_when_absent(tmp_path, capsys):
+    _seed(tmp_path)
+    capsys.readouterr()
+    rc = main(["--vault", str(tmp_path), "note", "Alpha.md"])
+    assert rc == 0
+    assert "trust:" not in capsys.readouterr().out
+
+
+def test_trust_command_lists_candidates(tmp_path, capsys):
+    _seed_okf(tmp_path)
+    capsys.readouterr()
+    rc = main(["--vault", str(tmp_path), "trust"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "advisory, never rejections" in out
+    assert "bundle/metric.md  [stale_after]" in out
+
+
+def test_trust_command_json(tmp_path, capsys):
+    _seed_okf(tmp_path)
+    capsys.readouterr()
+    rc = main(["--vault", str(tmp_path), "--json", "trust"])
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["counts"]["stale_after"] == 1
+    assert {c["check"] for c in payload["candidates"]} >= {"stale_after"}
+
+
+def test_trust_command_on_plain_vault(tmp_path, capsys):
+    _seed(tmp_path)
+    capsys.readouterr()
+    rc = main(["--vault", str(tmp_path), "--json", "trust"])
+    assert rc == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["candidates"] == []
+
+
+def test_neighbors_prints_trust_line(tmp_path, capsys):
+    _seed_okf(tmp_path)
+    capsys.readouterr()
+    rc = main(["--vault", str(tmp_path), "neighbors", "bundle/metric.md"])
+    assert rc == 0
+    out = capsys.readouterr().out
+    assert "trust: status: stable" in out
+    assert "bundle/policy.md" in out

@@ -161,12 +161,14 @@ def _classify_impl(
     skip_report_folders: bool = True,
 ) -> tuple[list[DriftCandidate], list[ConceptCandidate], list[FlipRefCandidate]]:
     # Grouping stays keyed on target_text (v1-identical); each row's anchor
-    # recombines into a per-row form for the flip-shape test below.
+    # recombines into a per-row form for the flip-shape test below. Wikilinks
+    # only: a broken markdown link is a legal-but-dangling OKF edge (visible in
+    # broken-links), never a concept gesture or drift candidate.
     by_target: dict[str, list[tuple[str, int]]] = defaultdict(list)
     anchors_by_target: dict[str, set[str | None]] = defaultdict(set)
     for src_path, target_text, target_anchor, line_no in db.execute(
         "SELECT src_path, target_text, target_anchor, line_no FROM links "
-        "WHERE target_path IS NULL"
+        "WHERE target_path IS NULL AND kind = 'wiki'"
     ):
         if skip_report_folders and _is_report_path(src_path):
             continue

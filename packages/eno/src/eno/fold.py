@@ -414,7 +414,7 @@ def _topic_sources_wikilink(
     hub_row = db.execute(
         """
         SELECT DISTINCT target_path FROM links
-        WHERE target_text = ? AND target_path IS NOT NULL
+        WHERE target_text = ? AND target_path IS NOT NULL AND kind = 'wiki'
         LIMIT 1
         """,
         (target,),
@@ -444,7 +444,7 @@ def _topic_sources_wikilink(
         """
         SELECT n.path, n.title, n.word_count, n.updated_at, n.mtime
         FROM links l JOIN notes n ON n.path = l.src_path
-        WHERE l.target_text = ?
+        WHERE l.target_text = ? AND l.kind = 'wiki'
         GROUP BY n.path
         ORDER BY n.mtime DESC
         LIMIT ?
@@ -579,6 +579,7 @@ def _wikilink_heat(
             SELECT DISTINCT target_text FROM links
             WHERE target_text IN ({placeholders})
               AND target_path IS NOT NULL
+              AND kind = 'wiki'
             """,
             targets,
         ).fetchall()

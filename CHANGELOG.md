@@ -7,6 +7,60 @@ workspace move in lockstep.
 
 ## [Unreleased]
 
+## [0.3.0] — 2026-07-28
+
+### Added
+
+- **Generic OKF v0.2 consumer** — eno now reads ordinary
+  [Open Knowledge Format](https://github.com/GoogleCloudPlatform/knowledge-catalog/blob/main/okf/SPEC.md)
+  bundles, not only flip notebooks, with no new dependency and no behavior
+  change on OKF-free vaults:
+  - **Markdown links as graph edges.** Standard `[alias](target)` links are
+    indexed alongside wikilinks (new `links.kind` column, `'wiki'` or `'md'`),
+    recording the target as written, the resolved path, the `#anchor`, the
+    alias text, and the source line. External schemes, image links, fenced
+    code, and inline code spans are skipped.
+  - **Resolution is path arithmetic only.** Relative targets resolve against
+    the note's directory; bundle-absolute `/…` targets against the containing
+    bundle root (a flip bundle when there is one, else the nearest ancestor
+    whose `index.md` carries frontmatter, else the vault root), with `dir/` and
+    extensionless fallbacks. No basename, alias, or fuzzy matching — an
+    unresolved markdown target is recorded unresolved, never guessed. Wikilink,
+    Flip-ID, alias, anchor, and workspace resolution are untouched.
+  - **Portable trust fields indexed** per note: `sources` (count, plus a
+    conservative unresolved count that never counts external URLs or scope
+    descriptors), `generated: {by, at}`, `verified` (a bare mapping is read as
+    a one-element list, per OKF §5.2), `status`, `stale_after`. Unknown
+    frontmatter — OKF extensions, flip's vocabulary, anything else — is
+    preserved and surfaced unchanged. Nothing is ever written back to a note.
+  - **Trust/currency summaries** on `note` and `neighbors` (CLI, `GET /note`,
+    `GET /neighbors`, MCP `eno_note` / `eno_neighbors`) as one compact line:
+    `generated 2026-07-01 by agent-x · verified ×2 (1 human) · stale
+    2026-09-23 · sources: 3 (1 unresolved)`. Absent fields say nothing; the
+    human tier keys off the `human:` actor prefix. Advisory signals, never
+    truth verdicts.
+  - **`eno trust`** (and `GET /trust`) — advisory review candidates: a passed
+    `stale_after`, a load-bearing concept type (`Claim`, `Finding`) with
+    neither `sources` nor `generated`, and content whose change signal
+    (`generated.at`, else mtime) postdates its latest verification. Review
+    candidates, never rejections — eno enforces no policy it doesn't own.
+
+### Changed
+
+- **Index schema v3.** Existing indexes rebuild automatically on the next
+  `eno index` (a one-time full reparse), as at v2.
+- `eno index` link counters now include markdown edges. Vaults without
+  markdown links (the demo vault included) report exactly the same numbers as
+  before.
+- Broken markdown links are visible in `broken-links` but are never classified
+  as concept or drift candidates: a dangling markdown link is legal OKF
+  not-yet-written knowledge, not a wikilink gesture or a typo.
+- Graph queries (`neighbors`, `orphans`, `stubs`, `frontier`) count markdown
+  edges, so a bundle wired with markdown links has a real graph instead of
+  looking like a pile of orphans. The wikilink-semantic surfaces — the
+  gardener's concept/drift classification and `fold`'s wikilink heat and topic
+  selection — stay wikilink-only.
+
 ## [0.2.0] — 2026-07-16
 
 ### Added
@@ -101,7 +155,8 @@ First public release.
 - Vault location is configured via `--vault` or `$ENO_VAULT_DIR`; there is no
   default path.
 
-[Unreleased]: https://github.com/lavallee/eno/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/lavallee/eno/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/lavallee/eno/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/lavallee/eno/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/lavallee/eno/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/lavallee/eno/releases/tag/v0.1.0

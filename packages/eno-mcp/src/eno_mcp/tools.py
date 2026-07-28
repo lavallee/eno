@@ -75,10 +75,14 @@ def eno_note(path: str, with_excerpt: bool = True) -> dict[str, Any]:
 
     Returns:
         {"path", "title", "word_count", "frontmatter", "headings", "excerpt",
-        "flip_id", "bundle_path", "bundle_handle"} on success (the last three
-        are null unless the note is a flip entity page / lives in a flip
-        bundle); {"note": null, "hint": "..."} if missing;
-        {"error": "...", "hint": "..."} on backend failure.
+        "flip_id", "bundle_path", "bundle_handle", "trust"} on success
+        (flip_id/bundle_path/bundle_handle are null unless the note is a flip
+        entity page / lives in a flip bundle; "trust" is a compact OKF
+        trust/currency line — "generated … · verified ×N · stale … ·
+        sources: N" — null when the note carries no trust frontmatter; it is
+        an advisory signal, never a truth verdict); {"note": null,
+        "hint": "..."} if missing; {"error": "...", "hint": "..."} on backend
+        failure.
     """
     try:
         view = make_backend().note(path, with_excerpt=with_excerpt)
@@ -102,9 +106,11 @@ def eno_neighbors(path: str) -> dict[str, Any]:
         path: vault-relative path of the focal note.
 
     Returns:
-        {"path", "title", "backlinks": [...], "outbound": [...]} where each
-        list element is {"path", "title", "word_count"}; or
-        {"neighborhood": null, "hint": "..."} if the note doesn't exist.
+        {"path", "title", "backlinks": [...], "outbound": [...], "trust"}
+        where each list element is {"path", "title", "word_count"} and
+        "trust" is the focal note's compact OKF trust/currency line (null
+        when absent); or {"neighborhood": null, "hint": "..."} if the note
+        doesn't exist.
     """
     try:
         n = make_backend().neighbors(path)

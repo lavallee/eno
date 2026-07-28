@@ -249,3 +249,63 @@ def test_health_service_mode_uses_service_url(monkeypatch):
     out = tools.eno_health()
     assert "error" in out
     assert "unreachable" in out["error"]
+
+
+# ---- OKF v0.2 consumer surface --------------------------------------------
+
+
+@pytest.fixture()
+def okf_vault(tmp_path: Path, monkeypatch) -> Path:
+    (tmp_path / "bundle").mkdir()
+    (tmp_path / "bundle" / "index.md").write_text('---\nokf_version: "0.2"\n---\n# Bundle\n')
+    (tmp_path / "bundle" / "metric.md").write_text(
+        "---\n"
+        "type: Metric\n"
+        "title: Parcel cost\n"
+        "status: stable\n"
+        "generated: { by: costing_agent/v3, at: 2026-07-01T10:00:00Z }\n"
+        "verified: { by: human:rivera, at: 2026-07-02T09:00:00Z }\n"
+        "sources:\n"
+        "  - { id: policy, resource: /policy.md, title: Policy }\n"
+        "x_department: logistics\n"
+        "---\n"
+        "# Parcel cost\n\nDefined against [the policy](/policy.md).\n"
+    )
+    (tmp_path / "bundle" / "policy.md").write_text("---\ntype: Reference\n---\n# Policy\n")
+    monkeypatch.setenv("ENO_VAULT_DIR", str(tmp_path))
+    monkeypatch.setenv("ENO_DIR", str(tmp_path / ".eno"))
+    monkeypatch.delenv("ENO_SERVICE_URL", raising=False)
+    index_vault(tmp_path)
+    return tmp_path
+
+
+def test_eno_note_carries_trust_line(okf_vault):
+    out = tools.eno_note("bundle/metric.md")
+    assert out["trust"] == (
+        "status: stable · generated 2026-07-01 by costing_agent/v3 · "
+        "verified ×1 (1 human) · sources: 1"
+    )
+    # Unknown extension keys survive the round trip to the agent.
+    assert out["frontmatter"]["x_department"] == "logistics"
+
+
+def test_eno_note_trust_null_on_plain_vault(vault):
+    out = tools.eno_note("Alpha.md")
+    assert out["trust"] is None
+
+
+def test_eno_neighbors_sees_markdown_edges(okf_vault):
+    out = tools.eno_neighbors("bundle/policy.md")
+    assert [b["path"] for b in out["backlinks"]] == ["bundle/metric.md"]
+    assert out["trust"] is None
+
+
+def test_eno_broken_links_shows_dangling_markdown_edge(okf_vault, tmp_path: Path):
+    (tmp_path / "bundle" / "metric.md").write_text(
+        "---\ntype: Metric\n---\n# Parcel cost\n\nSee [the gone page](/gone.md).\n"
+    )
+    index_vault(tmp_path)
+    out = tools.eno_broken_links()
+    assert ("bundle/metric.md", "/gone.md") in [
+        (link["src_path"], link["target_text"]) for link in out["links"]
+    ]

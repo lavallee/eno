@@ -41,6 +41,8 @@ from .views import (
     Proposal,
     ProposalReport,
     TilingReport,
+    TrustCandidate,
+    TrustReport,
     WriteResult,
 )
 
@@ -83,6 +85,7 @@ class Backend(Protocol):
         model: str = "nomic-embed-text",
     ) -> TilingReport: ...
     def hygiene(self) -> HygieneReport: ...
+    def trust_health(self) -> TrustReport: ...
     def hygiene_propose(
         self, *, include_unknown: bool = False
     ) -> ProposalReport: ...
@@ -159,6 +162,9 @@ class LocalBackend:
 
     def hygiene(self):
         return queries.hygiene(self._conn())
+
+    def trust_health(self):
+        return queries.trust_health(self._conn())
 
     def hygiene_propose(self, *, include_unknown=False):
         return hygiene_mod.propose_all(
@@ -262,6 +268,10 @@ class ServiceBackend:
         data = self.client.get("/hygiene")
         return _hydrate_hygiene(data) if data else HygieneReport()
 
+    def trust_health(self):
+        data = self.client.get("/trust")
+        return _hydrate_trust_report(data) if data else TrustReport()
+
     def hygiene_propose(self, *, include_unknown=False):
         data = self.client.post(
             "/hygiene/propose", {"include_unknown": include_unknown}
@@ -342,6 +352,7 @@ def _hydrate_note_view(data: dict) -> NoteView:
         flip_id=data.get("flip_id"),
         bundle_path=data.get("bundle_path"),
         bundle_handle=data.get("bundle_handle"),
+        trust=data.get("trust"),
     )
 
 
@@ -351,6 +362,7 @@ def _hydrate_neighborhood(data: dict) -> Neighborhood:
         title=data["title"],
         backlinks=[NoteRef(**r) for r in data.get("backlinks", []) or []],
         outbound=[NoteRef(**r) for r in data.get("outbound", []) or []],
+        trust=data.get("trust"),
     )
 
 
@@ -383,6 +395,13 @@ def _hydrate_hot_cache(data: dict) -> HotCache:
 def _hydrate_hygiene(data: dict) -> HygieneReport:
     return HygieneReport(
         issues=[HygieneIssue(**i) for i in data.get("issues", []) or []],
+        counts=data.get("counts", {}) or {},
+    )
+
+
+def _hydrate_trust_report(data: dict) -> TrustReport:
+    return TrustReport(
+        candidates=[TrustCandidate(**c) for c in data.get("candidates", []) or []],
         counts=data.get("counts", {}) or {},
     )
 
