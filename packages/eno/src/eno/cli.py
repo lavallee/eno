@@ -17,6 +17,7 @@ from .views import (
     NoteRef,
     NoteView,
     TilingReport,
+    TrustReport,
     WriteResult,
 )
 
@@ -46,6 +47,7 @@ def main(argv: list[str] | None = None) -> int:
             "tiling": _cmd_tiling,
             "fold": _cmd_fold,
             "hygiene": _cmd_hygiene,
+            "trust": _cmd_trust,
             "garden": _cmd_garden,
             "create-note": _cmd_create_note,
             "append-to-note": _cmd_append_to_note,
@@ -235,6 +237,12 @@ def _build_parser() -> argparse.ArgumentParser:
         "--dry-run",
         action="store_true",
         help="for --apply: report what would change without writing",
+    )
+
+    sub.add_parser(
+        "trust",
+        help="OKF trust/currency review candidates (advisory — stale, "
+        "unprovenanced, changed-since-verified)",
     )
 
     p_create = sub.add_parser(
@@ -672,6 +680,11 @@ def _cmd_hygiene(backend, args) -> int:
     return 0
 
 
+def _cmd_trust(backend, args) -> int:
+    _emit(args, backend.trust_health())
+    return 0
+
+
 def _cmd_hygiene_propose(backend, args) -> int:
     from .hygiene import default_report_path, render_report
 
@@ -903,6 +916,8 @@ def _print_one(item) -> None:
     elif isinstance(item, NoteView):
         print(f"# {item.title}")
         print(f"({item.path}, {item.word_count} words)")
+        if item.trust:
+            print(f"trust: {item.trust}")
         if item.frontmatter:
             print("\nfrontmatter:")
             for k, v in item.frontmatter.items():
@@ -916,6 +931,8 @@ def _print_one(item) -> None:
             print(f"\nexcerpt:\n{item.excerpt}")
     elif isinstance(item, Neighborhood):
         print(f"# {item.title}  ({item.path})")
+        if item.trust:
+            print(f"trust: {item.trust}")
         print(f"\nbacklinks ({len(item.backlinks)}):")
         for r in item.backlinks:
             print(f"  {r.path}  [{r.title}]")
@@ -998,6 +1015,17 @@ def _print_one(item) -> None:
         for k, v in item.counts.items():
             if k != "total":
                 print(f"  missing {k}: {v}")
+    elif isinstance(item, TrustReport):
+        total = item.counts.get("total", 0)
+        print(
+            f"trust: {len(item.candidates)} review candidates from {total} notes "
+            "(advisory, never rejections)"
+        )
+        for k, v in item.counts.items():
+            if k != "total" and v:
+                print(f"  {k}: {v}")
+        for c in item.candidates:
+            print(f"  {c.path}  [{c.check}] {c.detail}")
 
 
 if __name__ == "__main__":

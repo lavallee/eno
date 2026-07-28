@@ -118,3 +118,77 @@ def test_malformed_frontmatter_treated_as_body():
     note = parse_note("x.md", raw)
     # YAMLError → fm = {}; body still has the broken yaml lines, but title falls back to H1
     assert note.title == "Real"
+
+
+# ---- markdown links (the OKF cross-linking form) ---------------------------
+
+
+def test_md_link_target_alias_and_line():
+    note = parse_note("x.md", "# X\n\nsee [the orders table](../tables/orders.md) now\n")
+    assert len(note.md_links) == 1
+    link = note.md_links[0]
+    assert link.target_text == "../tables/orders.md"
+    assert link.alias == "the orders table"
+    assert link.anchor is None
+    assert link.line_no == 3
+
+
+def test_md_link_anchor_split_from_path():
+    note = parse_note("x.md", "# X\n\n[orders](orders.md#schema)\n")
+    assert note.md_links[0].target_text == "orders.md"
+    assert note.md_links[0].anchor == "schema"
+
+
+def test_md_link_external_schemes_skipped():
+    raw = (
+        "# X\n\n[web](https://example.invalid/a) [mail](mailto:x@example.invalid) "
+        "[proto](//example.invalid/b) [local](local.md)\n"
+    )
+    note = parse_note("x.md", raw)
+    assert [link.target_text for link in note.md_links] == ["local.md"]
+
+
+def test_md_link_images_skipped():
+    note = parse_note("x.md", "# X\n\n![diagram](pic.png) and [real](real.md)\n")
+    assert [link.target_text for link in note.md_links] == ["real.md"]
+
+
+def test_md_links_in_code_fence_and_inline_code_skipped():
+    raw = (
+        "# X\n\n[real](real.md)\n\n"
+        "`[inline](inline.md)`\n\n"
+        "```\n[fenced](fenced.md)\n```\n\n"
+        "[also real](also.md)\n"
+    )
+    note = parse_note("x.md", raw)
+    assert [link.target_text for link in note.md_links] == ["real.md", "also.md"]
+
+
+def test_md_link_pure_fragment_is_not_an_edge():
+    note = parse_note("x.md", "# X\n\n[jump](#section) and [out](other.md)\n")
+    assert [link.target_text for link in note.md_links] == ["other.md"]
+
+
+def test_md_link_title_attribute_stripped():
+    note = parse_note("x.md", '# X\n\n[t](target.md "hover text")\n')
+    assert note.md_links[0].target_text == "target.md"
+
+
+def test_md_link_bundle_absolute_kept_as_written():
+    """Resolution is the indexer's job — the parser records the path verbatim."""
+    note = parse_note("deep/x.md", "# X\n\n[g](/references/glossary.md)\n")
+    assert note.md_links[0].target_text == "/references/glossary.md"
+
+
+def test_md_and_wikilinks_coexist():
+    note = parse_note("x.md", "# X\n\n[[Wiki]] and [md](md.md)\n")
+    assert [link.target_text for link in note.links] == ["Wiki"]
+    assert [link.target_text for link in note.md_links] == ["md.md"]
+
+
+def test_footnote_definition_link_is_an_edge():
+    """flip's per-claim attribution puts the citation in a footnote definition;
+    those lines are ordinary markdown links and must produce edges."""
+    raw = "# X\n\nclaim text[^A1]\n\n[^A1]: [Field trial](../references/trial.md)\n"
+    note = parse_note("claims/x.md", raw)
+    assert [link.target_text for link in note.md_links] == ["../references/trial.md"]

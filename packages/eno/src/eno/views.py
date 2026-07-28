@@ -44,6 +44,9 @@ class NoteView:
     flip_id: str | None = None
     bundle_path: str | None = None
     bundle_handle: str | None = None
+    # Compact OKF trust/currency line ("generated … · verified ×N · stale … ·
+    # sources: N"); None when the note carries no trust frontmatter.
+    trust: str | None = None
 
 
 @dataclass
@@ -52,6 +55,7 @@ class Neighborhood:
     title: str
     backlinks: list[NoteRef] = field(default_factory=list)
     outbound: list[NoteRef] = field(default_factory=list)
+    trust: str | None = None  # same line as NoteView.trust, for the focal note
 
 
 @dataclass
@@ -63,6 +67,31 @@ class HygieneIssue:
 @dataclass
 class HygieneReport:
     issues: list[HygieneIssue] = field(default_factory=list)
+    counts: dict = field(default_factory=dict)
+
+
+@dataclass
+class TrustCandidate:
+    """An OKF trust/currency review candidate — advisory, never a rejection.
+
+    check is one of:
+    - 'stale_after' — the note's own stale_after date has passed
+    - 'missing_provenance' — a load-bearing concept type (Claim, Finding)
+      with neither sources nor generated
+    - 'changed_since_verified' — content signal (generated.at, else mtime)
+      postdates the latest verification event
+    """
+    path: str
+    check: str
+    detail: str = ""
+
+
+@dataclass
+class TrustReport:
+    """Advisory OKF trust health over the indexed vault. Mirrors HygieneReport:
+    counts for the headline, candidates for the detail. eno surfaces these for
+    review; it enforces nothing — trust policy belongs to the bundle's owner."""
+    candidates: list[TrustCandidate] = field(default_factory=list)
     counts: dict = field(default_factory=dict)
 
 

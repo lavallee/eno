@@ -160,7 +160,7 @@ def test_state_json_written(tmp_path: Path):
     import json
 
     state = json.loads(sp.read_text())
-    assert state["schema_version"] == 2
+    assert state["schema_version"] == 3
     assert "last_full_index_at" in state
     assert state["stats"]["parsed"] == 1
 
@@ -441,7 +441,7 @@ def test_v1_index_db_rebuilt_on_open(tmp_path: Path):
     assert stats.parsed == 2  # full reparse: the rebuilt notes table came back empty
     db = sqlite3.connect(db_path)
     (uv,) = db.execute("PRAGMA user_version").fetchone()
-    assert uv == 2
+    assert uv == 3
     paths = sorted(r[0] for r in db.execute("SELECT path FROM notes"))
     assert paths == ["X.md", "Y.md"]  # stale row gone
     assert _target_of(db, "X.md", "Y") == "Y.md"

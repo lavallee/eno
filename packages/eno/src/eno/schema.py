@@ -3,11 +3,16 @@
 Five tables: notes, headings, links, tags, aliases. Backlinks are a query, not a table.
 Schema version pinned in `PRAGMA user_version` (and echoed in state.json); on bump,
 the tables are dropped and the vault reindexed on next open (cheap at vault scale).
+
+v3 adds `links.kind` ('wiki' | 'md' — markdown links are OKF's cross-linking
+form) and the portable OKF v0.2 trust/lifecycle columns on notes (status,
+stale_after, generated_*, verified_*, sources_*). All derived from frontmatter
+plus link resolution; the index stays fully disposable.
 """
 
 import sqlite3
 
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS notes (
@@ -27,7 +32,16 @@ CREATE TABLE IF NOT EXISTS notes (
     indexed_at REAL NOT NULL,
     flip_id TEXT,
     bundle_path TEXT,
-    bundle_handle TEXT
+    bundle_handle TEXT,
+    status TEXT,
+    stale_after TEXT,
+    generated_by TEXT,
+    generated_at TEXT,
+    verified_count INTEGER,
+    verified_human INTEGER,
+    verified_last_at TEXT,
+    sources_count INTEGER,
+    sources_unresolved INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS headings (
@@ -43,7 +57,8 @@ CREATE TABLE IF NOT EXISTS links (
     target_path TEXT,
     target_anchor TEXT,
     alias TEXT,
-    line_no INTEGER NOT NULL
+    line_no INTEGER NOT NULL,
+    kind TEXT NOT NULL DEFAULT 'wiki'
 );
 
 CREATE TABLE IF NOT EXISTS tags (

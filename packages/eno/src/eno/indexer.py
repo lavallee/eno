@@ -1,12 +1,14 @@
 """Walk the vault, parse changed notes, write to sqlite. Idempotent and incremental on mtime."""
 
 import json
+import posixpath
 import sqlite3
 import time
+import urllib.parse
 from dataclasses import asdict, dataclass
 from pathlib import Path, PurePosixPath
 
-from . import flip_conventions
+from . import flip_conventions, okf_conventions
 from .config import index_path, state_path
 from .db import open_index
 from .parser import ParsedNote, parse_note
@@ -70,8 +72,11 @@ def index_vault(vault: Path, *, full: bool = False) -> IndexStats:
         stats.flip_handles = handles
 
         resolved, broken = _resolve_links(db, handle_map, stats)
-        stats.links_resolved = resolved
-        stats.links_broken = broken
+        md_resolved, md_broken = _resolve_md_links(db)
+        stats.links_resolved = resolved + md_resolved
+        stats.links_broken = broken + md_broken
+
+        _annotate_okf_sources(db)
 
         db.commit()
     finally:
@@ -93,13 +98,16 @@ def _walk_vault(vault: Path):
 
 def _upsert_note(db: sqlite3.Connection, note: ParsedNote, mtime: float) -> None:
     fm = note.frontmatter
+    trust = okf_conventions.lift_trust_columns(fm)
     db.execute("DELETE FROM notes WHERE path = ?", (note.path,))
     db.execute(
         """
         INSERT INTO notes (
             path, title, word_count, mtime, content_hash, frontmatter_json,
-            origin, stage, type, created_at, updated_at, kind, has_canvas, indexed_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            origin, stage, type, created_at, updated_at, kind, has_canvas, indexed_at,
+            status, stale_after, generated_by, generated_at,
+            verified_count, verified_human, verified_last_at, sources_count
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             note.path,
@@ -116,6 +124,14 @@ def _upsert_note(db: sqlite3.Connection, note: ParsedNote, mtime: float) -> None
             "md",
             0,
             time.time(),
+            trust["status"],
+            trust["stale_after"],
+            trust["generated_by"],
+            trust["generated_at"],
+            trust["verified_count"],
+            trust["verified_human"],
+            trust["verified_last_at"],
+            trust["sources_count"],
         ),
     )
     if note.headings:
@@ -130,6 +146,15 @@ def _upsert_note(db: sqlite3.Connection, note: ParsedNote, mtime: float) -> None
             [
                 (note.path, link.target_text, link.anchor, link.alias, link.line_no)
                 for link in note.links
+            ],
+        )
+    if note.md_links:
+        db.executemany(
+            "INSERT INTO links (src_path, target_text, target_path, target_anchor, alias, "
+            "line_no, kind) VALUES (?, ?, NULL, ?, ?, ?, 'md')",
+            [
+                (note.path, link.target_text, link.anchor, link.alias, link.line_no)
+                for link in note.md_links
             ],
         )
     if note.tags:
@@ -261,7 +286,7 @@ def _resolve_links(
     broken = 0
     updates: list[tuple[str | None, int]] = []
     for rowid, src_path, target_text, anchor in db.execute(
-        "SELECT rowid, src_path, target_text, target_anchor FROM links"
+        "SELECT rowid, src_path, target_text, target_anchor FROM links WHERE kind = 'wiki'"
     ).fetchall():
         target = _resolve_one(
             target_text,
@@ -319,6 +344,135 @@ def _resolve_one(
     if target_text.lower() in alias_map:
         return alias_map[target_text.lower()]
     return None
+
+
+def _okf_roots(db: sqlite3.Connection) -> list[str]:
+    """Directories whose index.md carries frontmatter — OKF bundle roots.
+
+    OKF permits index.md frontmatter only on a bundle root (§12), so presence
+    of any frontmatter marks the root. Flip bundle roots are a subset (their
+    index.md carries okf_version + flip), but flip's own bundle_path wins for
+    notes inside a flip bundle (see _md_root). Longest-first for nearest-
+    ancestor matching via _containing_bundle.
+    """
+    roots = [
+        path[: -len("index.md")].rstrip("/")
+        for (path,) in db.execute(
+            "SELECT path FROM notes WHERE (path = 'index.md' OR path LIKE '%/index.md') "
+            "AND frontmatter_json != '{}'"
+        )
+    ]
+    roots.sort(key=len, reverse=True)
+    return roots
+
+
+def _md_root(path: str, flip_bundle: str | None, okf_roots_longest_first: list[str]) -> str:
+    """The root a `/…` (bundle-absolute) markdown link resolves against.
+
+    The containing flip bundle when there is one; else the nearest ancestor
+    with a frontmatter'd index.md; else the vault root ("")."""
+    if flip_bundle is not None:
+        return flip_bundle
+    root = _containing_bundle(path, okf_roots_longest_first)
+    return root if root is not None else ""
+
+
+def _resolve_md_links(db: sqlite3.Connection) -> tuple[int, int]:
+    """Resolve markdown-link target_text → target_path.
+
+    Deterministic path arithmetic only — relative targets against the note's
+    directory, `/…` targets against the bundle root — with the standard
+    directory fallbacks (`dir/` → dir/index.md; extensionless → +.md, then
+    /index.md). No basename, alias, or fuzzy fallback: an unresolved target
+    stays NULL, recorded but never guessed at (broken links are legal OKF).
+    """
+    paths_set = {row[0] for row in db.execute("SELECT path FROM notes")}
+    okf_roots = _okf_roots(db)
+    bundle_by_src: dict[str, str] = dict(
+        db.execute("SELECT path, bundle_path FROM notes WHERE bundle_path IS NOT NULL")
+    )
+    resolved = 0
+    broken = 0
+    updates: list[tuple[str | None, int]] = []
+    for rowid, src_path, target_text in db.execute(
+        "SELECT rowid, src_path, target_text FROM links WHERE kind = 'md'"
+    ).fetchall():
+        root = _md_root(src_path, bundle_by_src.get(src_path), okf_roots)
+        target = _resolve_md_target(target_text, src_path, root, paths_set)
+        updates.append((target, rowid))
+        if target:
+            resolved += 1
+        else:
+            broken += 1
+    db.executemany("UPDATE links SET target_path = ? WHERE rowid = ?", updates)
+    return resolved, broken
+
+
+def _resolve_md_target(
+    target_text: str, src_path: str, root: str, paths_set: set[str]
+) -> str | None:
+    decoded = urllib.parse.unquote(target_text)
+    if decoded.startswith("/"):
+        joined = f"{root}/{decoded[1:]}" if root else decoded[1:]
+    else:
+        joined = posixpath.join(posixpath.dirname(src_path), decoded)
+    cand = posixpath.normpath(joined)
+    if cand in ("", ".", "..") or cand.startswith("../"):
+        return None  # escapes the vault, or names nothing
+    if cand in paths_set:
+        return cand
+    if decoded.endswith("/"):
+        idx = f"{cand}/index.md"
+        return idx if idx in paths_set else None
+    if "." not in posixpath.basename(cand):
+        for c in (f"{cand}.md", f"{cand}/index.md"):
+            if c in paths_set:
+                return c
+    return None
+
+
+def _annotate_okf_sources(db: sqlite3.Connection) -> None:
+    """Count unresolved provenance entries per note carrying `sources`.
+
+    Conservative by design: an entry is unresolved when it has no resource at
+    all (a dangling cite keeps just its id) or when its resource is a
+    bundle-path-shaped .md that doesn't land on an indexed note. External URLs,
+    scope descriptors, and non-md bundle assets are never counted — eno can't
+    check them, so it doesn't claim to.
+    """
+    paths_set = {row[0] for row in db.execute("SELECT path FROM notes")}
+    okf_roots = _okf_roots(db)
+    bundle_by_src: dict[str, str] = dict(
+        db.execute("SELECT path, bundle_path FROM notes WHERE bundle_path IS NOT NULL")
+    )
+    updates: list[tuple[int, str]] = []
+    for path, fm_json in db.execute(
+        "SELECT path, frontmatter_json FROM notes WHERE sources_count IS NOT NULL"
+    ).fetchall():
+        try:
+            fm = json.loads(fm_json) or {}
+        except json.JSONDecodeError:
+            fm = {}
+        if not isinstance(fm, dict):
+            fm = {}
+        root = _md_root(path, bundle_by_src.get(path), okf_roots)
+        unresolved = 0
+        for entry in okf_conventions.parse_sources(fm):
+            resource = entry.get("resource")
+            shape = okf_conventions.classify_resource(resource)
+            if shape == "missing" or (
+                shape == "note-path"
+                and _resolve_md_target(
+                    str(resource).strip().split("#", 1)[0], path, root, paths_set
+                )
+                is None
+            ):
+                unresolved += 1
+        updates.append((unresolved, path))
+    if updates:
+        db.executemany(
+            "UPDATE notes SET sources_unresolved = ? WHERE path = ?", updates
+        )
 
 
 def _write_state(vault: Path, stats: IndexStats) -> None:

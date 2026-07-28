@@ -163,6 +163,11 @@ def create_app() -> FastAPI:
         with _db() as db:
             return asdict(queries.hygiene(db))
 
+    @app.get("/trust")
+    def trust_endpoint():
+        with _db() as db:
+            return asdict(queries.trust_health(db))
+
     @app.post("/index")
     def index(full: bool = False):
         stats = index_vault(vault_dir(), full=full)

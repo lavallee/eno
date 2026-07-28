@@ -248,3 +248,78 @@ def test_hygiene_apply(vault: Path, client: TestClient):
     new = (vault / "Beta.md").read_text()
     assert "origin: human" in new
     assert new.startswith("---\n")
+
+
+# ---- OKF v0.2 consumer surface --------------------------------------------
+
+
+@pytest.fixture()
+def okf_vault(tmp_path: Path, monkeypatch) -> Path:
+    """A one-page OKF bundle carrying the portable trust families plus an
+    unknown extension key."""
+    (tmp_path / "bundle").mkdir()
+    (tmp_path / "bundle" / "index.md").write_text('---\nokf_version: "0.2"\n---\n# Bundle\n')
+    (tmp_path / "bundle" / "metric.md").write_text(
+        "---\n"
+        "type: Metric\n"
+        "title: Parcel cost\n"
+        "status: stable\n"
+        "stale_after: 2020-01-01\n"
+        "generated: { by: costing_agent/v3, at: 2026-07-01T10:00:00Z }\n"
+        "verified: { by: human:rivera, at: 2026-06-10T09:00:00Z }\n"
+        "sources:\n"
+        "  - { id: policy, resource: /policy.md, title: Policy }\n"
+        "x_department: logistics\n"
+        "---\n"
+        "# Parcel cost\n\nDefined against [the policy](/policy.md).\n"
+    )
+    (tmp_path / "bundle" / "policy.md").write_text("---\ntype: Reference\n---\n# Policy\n")
+    monkeypatch.setenv("ENO_VAULT_DIR", str(tmp_path))
+    monkeypatch.setenv("ENO_DIR", str(tmp_path / ".eno"))
+    index_vault(tmp_path)
+    return tmp_path
+
+
+@pytest.fixture()
+def okf_client(okf_vault: Path) -> TestClient:
+    return TestClient(create_app())
+
+
+def test_note_carries_trust_summary_and_unknown_keys(okf_client: TestClient):
+    r = okf_client.get("/note", params={"path": "bundle/metric.md"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["trust"] == (
+        "status: stable · generated 2026-07-01 by costing_agent/v3 · "
+        "verified ×1 (1 human) · stale 2020-01-01 · sources: 1"
+    )
+    assert body["frontmatter"]["x_department"] == "logistics"
+
+
+def test_note_trust_is_null_on_a_plain_vault(client: TestClient):
+    r = client.get("/note", params={"path": "Alpha.md"})
+    assert r.json()["trust"] is None
+
+
+def test_neighbors_carries_trust_and_markdown_edges(okf_client: TestClient):
+    r = okf_client.get("/neighbors", params={"path": "bundle/policy.md"})
+    assert r.status_code == 200
+    body = r.json()
+    assert [b["path"] for b in body["backlinks"]] == ["bundle/metric.md"]
+    assert body["trust"] is None  # policy.md carries no trust frontmatter
+
+
+def test_trust_endpoint(okf_client: TestClient):
+    r = okf_client.get("/trust")
+    assert r.status_code == 200
+    body = r.json()
+    checks = {(c["path"], c["check"]) for c in body["candidates"]}
+    assert ("bundle/metric.md", "stale_after") in checks
+    assert ("bundle/metric.md", "changed_since_verified") in checks
+    assert body["counts"]["stale_after"] == 1
+
+
+def test_trust_endpoint_empty_on_a_plain_vault(client: TestClient):
+    r = client.get("/trust")
+    assert r.status_code == 200
+    assert r.json()["candidates"] == []

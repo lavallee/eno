@@ -11,6 +11,7 @@ import sqlite3
 import time
 from datetime import UTC, date, datetime, timedelta
 
+from . import okf_conventions
 from .views import (
     BrokenLink,
     FrontierNote,
@@ -22,7 +23,41 @@ from .views import (
     Neighborhood,
     NoteRef,
     NoteView,
+    TrustCandidate,
+    TrustReport,
 )
+
+# The trust columns every summary read needs, in one reusable SELECT fragment.
+_TRUST_COLS = (
+    "status, stale_after, generated_by, generated_at, "
+    "verified_count, verified_human, verified_last_at, "
+    "sources_count, sources_unresolved"
+)
+
+
+def _trust_line(row: tuple) -> str | None:
+    """Build the compact trust summary from a _TRUST_COLS-ordered row slice."""
+    (
+        status,
+        stale_after,
+        generated_by,
+        generated_at,
+        verified_count,
+        verified_human,
+        _verified_last_at,
+        sources_count,
+        sources_unresolved,
+    ) = row
+    return okf_conventions.trust_summary(
+        status=status,
+        stale_after=stale_after,
+        generated_by=generated_by,
+        generated_at=generated_at,
+        verified_count=verified_count,
+        verified_human=verified_human,
+        sources_count=sources_count,
+        sources_unresolved=sources_unresolved,
+    )
 
 
 def search(
@@ -57,8 +92,8 @@ def search(
 
 def note(db: sqlite3.Connection, path: str) -> NoteView | None:
     row = db.execute(
-        "SELECT path, title, word_count, frontmatter_json, flip_id, bundle_path, bundle_handle "
-        "FROM notes WHERE path = ?",
+        "SELECT path, title, word_count, frontmatter_json, flip_id, bundle_path, bundle_handle, "
+        f"{_TRUST_COLS} FROM notes WHERE path = ?",
         (path,),
     ).fetchone()
     if not row:
@@ -83,11 +118,14 @@ def note(db: sqlite3.Connection, path: str) -> NoteView | None:
         flip_id=row[4],
         bundle_path=row[5],
         bundle_handle=row[6],
+        trust=_trust_line(row[7:]),
     )
 
 
 def neighbors(db: sqlite3.Connection, path: str) -> Neighborhood | None:
-    row = db.execute("SELECT title FROM notes WHERE path = ?", (path,)).fetchone()
+    row = db.execute(
+        f"SELECT title, {_TRUST_COLS} FROM notes WHERE path = ?", (path,)
+    ).fetchone()
     if not row:
         return None
     backlinks = [
@@ -114,7 +152,13 @@ def neighbors(db: sqlite3.Connection, path: str) -> Neighborhood | None:
             (path,),
         )
     ]
-    return Neighborhood(path=path, title=row[0], backlinks=backlinks, outbound=outbound)
+    return Neighborhood(
+        path=path,
+        title=row[0],
+        backlinks=backlinks,
+        outbound=outbound,
+        trust=_trust_line(row[1:]),
+    )
 
 
 def orphans(
@@ -416,3 +460,88 @@ def hygiene(db: sqlite3.Connection) -> HygieneReport:
                 counts[f] += 1
             issues.append(HygieneIssue(path=path, missing=missing))
     return HygieneReport(issues=issues, counts=counts)
+
+
+# Concept types whose assertions the surrounding work leans on. Conservative
+# by design — only types where absent provenance is clearly worth a look.
+TRUST_LOAD_BEARING_TYPES = ("Claim", "Finding")
+
+TRUST_CHECKS = ("stale_after", "missing_provenance", "changed_since_verified")
+
+
+def trust_health(db: sqlite3.Connection) -> TrustReport:
+    """Advisory OKF trust/currency review candidates. Never rejections.
+
+    Three checks (see views.TrustCandidate): a passed stale_after date, a
+    load-bearing concept type with no provenance at all, and content whose
+    change signal (generated.at when indexed, else file mtime) postdates the
+    latest verification event. On a vault with no trust frontmatter the report
+    is empty — presence-gated like the rest of the OKF surface.
+    """
+    today = date.today().isoformat()
+    candidates: list[TrustCandidate] = []
+    counts: dict[str, int] = {c: 0 for c in TRUST_CHECKS}
+    counts["total"] = 0
+
+    for (
+        path,
+        note_type,
+        mtime,
+        stale_after,
+        generated_by,
+        generated_at,
+        verified_last_at,
+        sources_count,
+    ) in db.execute(
+        "SELECT path, type, mtime, stale_after, generated_by, generated_at, "
+        "verified_last_at, sources_count FROM notes ORDER BY path"
+    ):
+        counts["total"] += 1
+
+        if stale_after and stale_after[:10] <= today:
+            counts["stale_after"] += 1
+            candidates.append(
+                TrustCandidate(
+                    path=path,
+                    check="stale_after",
+                    detail=f"stale since {stale_after[:10]}",
+                )
+            )
+
+        if (
+            note_type in TRUST_LOAD_BEARING_TYPES
+            and not sources_count
+            and generated_by is None
+            and generated_at is None
+        ):
+            counts["missing_provenance"] += 1
+            candidates.append(
+                TrustCandidate(
+                    path=path,
+                    check="missing_provenance",
+                    detail=f"type {note_type} with no sources and no generated",
+                )
+            )
+
+        verified_dt = okf_conventions.parse_when(verified_last_at)
+        if verified_dt is not None:
+            if generated_at is not None:
+                changed_dt = okf_conventions.parse_when(generated_at)
+                signal = "generated"
+            else:
+                changed_dt = datetime.fromtimestamp(mtime, UTC) if mtime else None
+                signal = "modified"
+            if changed_dt is not None and changed_dt > verified_dt:
+                counts["changed_since_verified"] += 1
+                candidates.append(
+                    TrustCandidate(
+                        path=path,
+                        check="changed_since_verified",
+                        detail=(
+                            f"{signal} {changed_dt.date().isoformat()} after last "
+                            f"verification {verified_dt.date().isoformat()}"
+                        ),
+                    )
+                )
+
+    return TrustReport(candidates=candidates, counts=counts)
