@@ -26,3 +26,12 @@ def test_full_flag_passes_through(tmp_path: Path, capsys):
     assert rc == 0
     out = capsys.readouterr().out
     assert "indexed 1 of 1 notes" in out  # --full forces reparse
+
+
+def test_include_root_requires_flip_registry(tmp_path: Path, capsys):
+    (tmp_path / "Central").mkdir()
+    rc = main([
+        "--vault", str(tmp_path), "index", "--include-root", "Central"
+    ])
+    assert rc == 2
+    assert "requires --flip-registry" in capsys.readouterr().err

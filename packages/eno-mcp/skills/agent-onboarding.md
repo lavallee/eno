@@ -65,7 +65,8 @@ answers most questions without burning budget on full bodies.
 
 **Read (cheap, no LLM behind them):**
 - `eno_hot(agent_name?)` — session-start bundle. Call first.
-- `eno_search(query, kind=title|tag)` — find by title substring or tag
+- `eno_search(query, kind=title|text|tag)` — find by title substring, body
+  phrase, or tag; Flip results carry their owning `bundle_path`
 - `eno_note(path)` — frontmatter + headings + ~400-char excerpt
 - `eno_neighbors(path)` — backlinks + outbound; map the neighborhood
 - `eno_frontier(folder?, halflife_days?)` — active outward-reaching pages
@@ -106,7 +107,11 @@ material.
 `eno_stale(older_than_days=90)` → `eno_note` each to check density.
 
 **"Did I already cover this?"** → `eno_tiling` for near-duplicates +
-`eno_search` by title before creating anything new.
+`eno_search` by title and body text before creating anything new.
+
+When `eno_health` reports a read-only Flip estate, use Eno for discovery and
+retrieval only. Route any authorized write through the repo named by the
+result's `bundle_path` and that notebook's Flip workflow.
 
 ## What NOT to do
 

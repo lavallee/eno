@@ -46,6 +46,23 @@ def test_search_by_tag(tmp_path):
     assert paths == ["A.md", "C.md"]
 
 
+def test_search_by_body_text_returns_bundle_identity(tmp_path):
+    _write(
+        tmp_path,
+        "notebooks/market/index.md",
+        '---\nokf_version: "0.2"\nflip: "0.9"\n---\n'
+        "# Market notebook\n\nA distinctive cross notebook signal lives here.\n",
+    )
+    _write(tmp_path, "Other.md", "# Other\n\nUnrelated prose.\n")
+    index_vault(tmp_path)
+    db = _open(tmp_path)
+    hits = queries.search(db, "distinctive cross notebook signal", kind="text")
+    assert len(hits) == 1
+    assert hits[0].path == "notebooks/market/index.md"
+    assert hits[0].matched_in == "text"
+    assert hits[0].bundle_path == "notebooks/market"
+
+
 def test_search_unknown_kind_raises(tmp_path):
     _write(tmp_path, "X.md", "# X\n")
     index_vault(tmp_path)

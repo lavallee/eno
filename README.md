@@ -56,6 +56,25 @@ export ENO_VAULT_DIR=~/notes
 eno index && eno hygiene
 ```
 
+To search many small, repo-local Flip notebooks without indexing every file in
+every repo, let Flip discover the notebooks and let eno consume the registry:
+
+```bash
+FLIP_HOME=/var/lib/eno/flip flip index --root ~/Projects
+export ENO_VAULT_DIR=~/Projects
+export ENO_DIR=/var/lib/eno/estate
+eno index --flip-registry /var/lib/eno/flip/index.jsonl \
+  --include-root Central
+eno search "source custody" --kind text
+```
+
+The estate index keeps one canonical filesystem copy per non-empty Flip UID,
+ignores dot-directory/worktree copies, preserves repo-local workspace handle
+scopes, and records every shadowed lineage in `state.json`. `--include-root`
+adds a complete directory such as an Obsidian vault alongside the notebooks.
+Set `ENO_READ_ONLY=1` on a shared MCP process so retrieval spans the estate but
+writes remain with each owning repo's Flip workflow.
+
 ## Why eno
 
 - **Token-efficient by construction.** Index queries return paths and small
@@ -84,7 +103,7 @@ eno index && eno hygiene
 
 ## A tour of what it does
 
-**Retrieve** — excerpt-first, graph-aware. `search` (title/tag), `note`
+**Retrieve** — excerpt-first, graph-aware. `search` (title/body/tag), `note`
 (frontmatter + headings + a ~400-char excerpt), `neighbors` (backlinks +
 outbound), `concepts`, `frontier`, `hot`.
 

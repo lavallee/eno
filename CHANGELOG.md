@@ -7,6 +7,28 @@ workspace move in lockstep.
 
 ## [Unreleased]
 
+### Added
+
+- **Flip-estate indexing** — `eno index --flip-registry PATH` consumes Flip's
+  JSONL discovery registry and indexes one visible filesystem copy per stable
+  notebook UID beneath a shared project root. Dot-directory/worktree copies
+  are ignored, duplicate lineages are deterministically shadowed and recorded
+  in `state.json`, UID-less notebooks remain visible for review, and
+  repeatable `--include-root` flags compose complete roots such as an Obsidian
+  vault alongside the repo-local notebooks.
+- **Body-text search** — `eno search --kind text` and MCP `eno_search` use an
+  FTS5 title/body index and return the owning Flip bundle path and handle.
+- Repo-local `.flip/workspace.toml` tables are resolved in their own scopes, so
+  two repositories can safely reuse the same notebook handle.
+- `ENO_READ_ONLY=1` makes local MCP write tools refuse mutation while retaining
+  the full retrieval surface. Local `eno_health` reports this posture and the
+  inspectable estate scope.
+
+### Changed
+
+- **Index schema v4.** Existing indexes rebuild automatically on the next
+  `eno index` to populate the disposable full-text index.
+
 ## [0.3.0] — 2026-07-28
 
 ### Added

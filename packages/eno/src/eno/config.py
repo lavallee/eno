@@ -31,3 +31,8 @@ def index_path(vault: Path) -> Path:
 
 def state_path(vault: Path) -> Path:
     return eno_dir(vault) / "state.json"
+
+
+def read_only() -> bool:
+    """Whether local mutation tools must refuse writes for this process."""
+    return os.environ.get("ENO_READ_ONLY", "").strip().lower() in {"1", "true", "yes", "on"}

@@ -41,6 +41,12 @@ def test_search(client: TestClient):
     assert "Alpha.md" in paths
 
 
+def test_search_body_text(client: TestClient):
+    r = client.get("/search", params={"q": "nothing inbound", "kind": "text"})
+    assert r.status_code == 200
+    assert [hit["path"] for hit in r.json()] == ["Orphan.md"]
+
+
 def test_note_returns_view_with_excerpt(client: TestClient):
     r = client.get("/note", params={"path": "Alpha.md"})
     assert r.status_code == 200

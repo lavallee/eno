@@ -710,4 +710,4 @@ def test_state_json_records_the_new_schema_version(okf_relative_vault: Path):
 
     index_vault(okf_relative_vault)
     state = json.loads(state_path(okf_relative_vault).read_text())
-    assert state["schema_version"] == 3
+    assert state["schema_version"] == 4

@@ -18,7 +18,7 @@ from . import hygiene as hygiene_mod
 from . import queries
 from . import writes as writes_mod
 from .client import EnoClient
-from .config import index_path, vault_dir
+from .config import index_path, read_only, vault_dir
 from .db import open_index
 from .excerpt import excerpt
 from .views import (
@@ -181,6 +181,12 @@ class LocalBackend:
         return garden_mod.classify_broken_links(self._conn())
 
     def create_note(self, path, body, *, frontmatter=None, overwrite=False, author=None):
+        if read_only():
+            return WriteResult(
+                path=path,
+                ok=False,
+                error="Eno is read-only; write through the owning notebook surface",
+            )
         result = writes_mod.create_note(
             self.vault, path, body,
             frontmatter=frontmatter, overwrite=overwrite, author=author,
@@ -191,6 +197,12 @@ class LocalBackend:
         return result
 
     def append_to_note(self, path, content, *, under_heading=None):
+        if read_only():
+            return WriteResult(
+                path=path,
+                ok=False,
+                error="Eno is read-only; write through the owning notebook surface",
+            )
         result = writes_mod.append_to_note(
             self.vault, path, content, under_heading=under_heading
         )

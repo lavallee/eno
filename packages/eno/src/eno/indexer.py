@@ -11,6 +11,7 @@ from pathlib import Path, PurePosixPath
 from . import flip_conventions, okf_conventions
 from .config import index_path, state_path
 from .db import open_index
+from .estate import EstateScope
 from .parser import ParsedNote, parse_note
 from .schema import SCHEMA_VERSION
 
@@ -29,18 +30,37 @@ class IndexStats:
     flip_bundles: int = 0
     flip_handles: int = 0
     flip_id_collisions: int = 0
+    scope: str = "vault"
+    scope_roots: int = 1
+    notebooks_discovered: int = 0
+    notebooks_indexed: int = 0
+    duplicate_lineages: int = 0
+    shadowed_copies: int = 0
+    missing_uids: int = 0
+    ignored_hidden_copies: int = 0
     elapsed_s: float = 0.0
 
 
-def index_vault(vault: Path, *, full: bool = False) -> IndexStats:
+def index_vault(
+    vault: Path, *, full: bool = False, estate: EstateScope | None = None
+) -> IndexStats:
     start = time.monotonic()
     stats = IndexStats()
+    if estate is not None:
+        stats.scope = "flip-estate"
+        stats.scope_roots = len(estate.roots)
+        stats.notebooks_discovered = estate.notebooks_discovered
+        stats.notebooks_indexed = estate.notebooks_indexed
+        stats.duplicate_lineages = estate.duplicate_lineages
+        stats.shadowed_copies = estate.shadowed_copies
+        stats.missing_uids = estate.missing_uids
+        stats.ignored_hidden_copies = estate.ignored_hidden_copies
     db = open_index(index_path(vault))
     try:
         existing: dict[str, float] = dict(db.execute("SELECT path, mtime FROM notes").fetchall())
         seen_paths: set[str] = set()
 
-        for md_path in _walk_vault(vault):
+        for md_path in _walk_vault(vault, roots=estate.roots if estate else None):
             rel = md_path.relative_to(vault).as_posix()
             seen_paths.add(rel)
             stats.seen += 1
@@ -64,14 +84,15 @@ def index_vault(vault: Path, *, full: bool = False) -> IndexStats:
 
         # Detect deletions
         for old_path in set(existing) - seen_paths:
+            db.execute("DELETE FROM notes_fts WHERE path = ?", (old_path,))
             db.execute("DELETE FROM notes WHERE path = ?", (old_path,))
             stats.deleted += 1
 
-        bundles, handles, handle_map = _annotate_flip(db, vault)
+        bundles, handles, handle_map, workspace_by_src = _annotate_flip(db, vault)
         stats.flip_bundles = bundles
         stats.flip_handles = handles
 
-        resolved, broken = _resolve_links(db, handle_map, stats)
+        resolved, broken = _resolve_links(db, handle_map, workspace_by_src, stats)
         md_resolved, md_broken = _resolve_md_links(db)
         stats.links_resolved = resolved + md_resolved
         stats.links_broken = broken + md_broken
@@ -83,22 +104,24 @@ def index_vault(vault: Path, *, full: bool = False) -> IndexStats:
         db.close()
 
     stats.elapsed_s = time.monotonic() - start
-    _write_state(vault, stats)
+    _write_state(vault, stats, estate=estate)
     return stats
 
 
-def _walk_vault(vault: Path):
+def _walk_vault(vault: Path, *, roots: tuple[Path, ...] | None = None):
     """Yield .md files under vault, skipping system dirs and any dotfile dir at any depth."""
-    for path in vault.rglob("*.md"):
-        rel_parts = path.relative_to(vault).parts[:-1]
-        if any(p in SKIP_DIRS or p.startswith(".") for p in rel_parts):
-            continue
-        yield path
+    for root in roots or (vault,):
+        for path in root.rglob("*.md"):
+            rel_parts = path.relative_to(vault).parts[:-1]
+            if any(p in SKIP_DIRS or p.startswith(".") for p in rel_parts):
+                continue
+            yield path
 
 
 def _upsert_note(db: sqlite3.Connection, note: ParsedNote, mtime: float) -> None:
     fm = note.frontmatter
     trust = okf_conventions.lift_trust_columns(fm)
+    db.execute("DELETE FROM notes_fts WHERE path = ?", (note.path,))
     db.execute("DELETE FROM notes WHERE path = ?", (note.path,))
     db.execute(
         """
@@ -133,6 +156,10 @@ def _upsert_note(db: sqlite3.Connection, note: ParsedNote, mtime: float) -> None
             trust["verified_last_at"],
             trust["sources_count"],
         ),
+    )
+    db.execute(
+        "INSERT INTO notes_fts (path, title, body) VALUES (?, ?, ?)",
+        (note.path, note.title, note.body),
     )
     if note.headings:
         db.executemany(
@@ -173,16 +200,14 @@ def _str_or_none(v) -> str | None:
     return None if v is None else str(v)
 
 
-def _annotate_flip(db: sqlite3.Connection, vault: Path) -> tuple[int, int, dict[str, str]]:
+def _annotate_flip(
+    db: sqlite3.Connection, vault: Path
+) -> tuple[int, int, dict[tuple[str, str], str], dict[str, str]]:
     """Detect flip bundle roots and annotate notes with bundle_path/bundle_handle/flip_id.
 
-    Returns (bundle_count, handle_count, handle -> bundle_path map). Bundle roots
-    come from the DB (frontmatter_json), not the filesystem, so unchanged notes
-    are covered on incremental runs. bundle_path AND flip_id are recomputed for
-    ALL notes each run (handles bundle-root creation/deletion without touching
-    entity notes). flip_id is only meaningful INSIDE a bundle: an `id: Q4` in
-    frontmatter outside any bundle stays NULL, so flip-free vaults carry no
-    flip_id rows at all. No-op on flip-free vaults.
+    Returns (bundle_count, handle_count, scoped handle map, source-workspace
+    map). Handles are scoped by the nearest workspace root, so repo-local
+    workspaces may reuse a petname without cross-resolving.
     """
     fms: dict[str, dict] = {}
     bundle_dirs: list[str] = []
@@ -194,9 +219,9 @@ def _annotate_flip(db: sqlite3.Connection, vault: Path) -> tuple[int, int, dict[
         if not isinstance(fm, dict):
             fm = {}
         fms[path] = fm
-        if (
-            path == "index.md" or path.endswith("/index.md")
-        ) and flip_conventions.is_bundle_root(fm):
+        if (path == "index.md" or path.endswith("/index.md")) and flip_conventions.is_bundle_root(
+            fm
+        ):
             bundle_dirs.append(path[: -len("index.md")].rstrip("/"))  # "" = vault root
 
     if not bundle_dirs:
@@ -204,7 +229,7 @@ def _annotate_flip(db: sqlite3.Connection, vault: Path) -> tuple[int, int, dict[
             "UPDATE notes SET bundle_path = NULL, bundle_handle = NULL, flip_id = NULL "
             "WHERE bundle_path IS NOT NULL OR bundle_handle IS NOT NULL OR flip_id IS NOT NULL"
         )
-        return 0, 0, {}
+        return 0, 0, {}, {}
 
     # Longest-prefix (nearest ancestor) wins for nested bundles.
     bundle_dirs.sort(key=len, reverse=True)
@@ -218,27 +243,57 @@ def _annotate_flip(db: sqlite3.Connection, vault: Path) -> tuple[int, int, dict[
         updates,
     )
 
-    # Workspace handle table — the one piece of I/O in flip awareness.
-    handle_map: dict[str, str] = {}
-    try:
-        text = (vault / ".flip" / "workspace.toml").read_text(encoding="utf-8")
-    except (OSError, UnicodeDecodeError):
-        text = ""
-    if text:
-        parsed = flip_conventions.parse_workspace_toml(text)
-        bundle_set = set(bundle_dirs)
-        handle_map = {h: p for h, p in parsed.items() if p in bundle_set}
+    # Read only workspace tables on indexed bundles' ancestor chains. This
+    # preserves repo-local handle scopes without scanning unrelated estate
+    # directories.
+    workspace_tables: dict[str, dict[str, str]] = {}
+    for bundle in bundle_dirs:
+        current = vault / bundle
+        while True:
+            workspace_rel = current.relative_to(vault).as_posix()
+            if workspace_rel == ".":
+                workspace_rel = ""
+            table = current / ".flip" / "workspace.toml"
+            if table.is_file():
+                if workspace_rel not in workspace_tables:
+                    try:
+                        text = table.read_text(encoding="utf-8")
+                    except (OSError, UnicodeDecodeError):
+                        text = ""
+                    workspace_tables[workspace_rel] = (
+                        flip_conventions.parse_workspace_toml(text) if text else {}
+                    )
+                break
+            if current == vault:
+                break
+            current = current.parent
 
-    # Bind one handle per bundle path; lexicographically smallest wins.
+    bundle_set = set(bundle_dirs)
+    handle_map: dict[tuple[str, str], str] = {}
+    for workspace_rel, bindings in workspace_tables.items():
+        for handle, local_bundle in bindings.items():
+            global_bundle = posixpath.normpath(posixpath.join(workspace_rel, local_bundle))
+            if global_bundle == ".":
+                global_bundle = ""
+            if global_bundle in bundle_set:
+                handle_map[(workspace_rel, handle)] = global_bundle
+
+    # Bind one display handle per bundle path; lexicographically smallest wins.
     handle_by_bundle: dict[str, str] = {}
-    for handle in sorted(handle_map):
-        handle_by_bundle.setdefault(handle_map[handle], handle)
+    for (_workspace, handle), bundle in sorted(handle_map.items()):
+        handle_by_bundle.setdefault(bundle, handle)
     if handle_by_bundle:
         db.executemany(
             "UPDATE notes SET bundle_handle = ? WHERE bundle_path = ?",
             [(h, bp) for bp, h in handle_by_bundle.items()],
         )
-    return len(bundle_dirs), len(handle_map), handle_map
+    workspace_roots = sorted(workspace_tables, key=len, reverse=True)
+    workspace_by_src: dict[str, str] = {}
+    for path in fms:
+        workspace = _containing_bundle(path, workspace_roots)
+        if workspace is not None:
+            workspace_by_src[path] = workspace
+    return len(bundle_dirs), len(handle_map), handle_map, workspace_by_src
 
 
 def _containing_bundle(path: str, bundle_dirs_longest_first: list[str]) -> str | None:
@@ -249,7 +304,10 @@ def _containing_bundle(path: str, bundle_dirs_longest_first: list[str]) -> str |
 
 
 def _resolve_links(
-    db: sqlite3.Connection, handle_map: dict[str, str], stats: IndexStats
+    db: sqlite3.Connection,
+    handle_map: dict[tuple[str, str], str],
+    workspace_by_src: dict[str, str],
+    stats: IndexStats,
 ) -> tuple[int, int]:
     """Resolve link target_text → target_path.
 
@@ -292,6 +350,7 @@ def _resolve_links(
             target_text,
             anchor,
             bundle_by_src.get(src_path),
+            workspace_by_src.get(src_path),
             paths_set,
             paths_lower,
             basename_map,
@@ -312,12 +371,13 @@ def _resolve_one(
     target_text: str,
     anchor: str | None,
     src_bundle: str | None,
+    src_workspace: str | None,
     paths_set: set[str],
     paths_lower: dict[str, str],
     basename_map: dict[str, str],
     alias_map: dict[str, str],
     flip_id_map: dict[tuple[str, str], str],
-    handle_map: dict[str, str],
+    handle_map: dict[tuple[str, str], str],
 ) -> str | None:
     candidate = target_text if target_text.endswith(".md") else f"{target_text}.md"
     if candidate in paths_set:
@@ -337,8 +397,9 @@ def _resolve_one(
         return flip_id_map.get((src_bundle, target_text))
     # Qualified: [[handle:A3]] or the deprecated [[handle#A3]] (via the anchor).
     q = flip_conventions.split_qualified(target_text, anchor)
-    if q is not None and q[0] in handle_map:
-        hit = flip_id_map.get((handle_map[q[0]], q[1]))
+    scoped_handle = (src_workspace, q[0]) if q is not None and src_workspace is not None else None
+    if q is not None and scoped_handle in handle_map:
+        hit = flip_id_map.get((handle_map[scoped_handle], q[1]))
         if hit:
             return hit
     if target_text.lower() in alias_map:
@@ -470,12 +531,10 @@ def _annotate_okf_sources(db: sqlite3.Connection) -> None:
                 unresolved += 1
         updates.append((unresolved, path))
     if updates:
-        db.executemany(
-            "UPDATE notes SET sources_unresolved = ? WHERE path = ?", updates
-        )
+        db.executemany("UPDATE notes SET sources_unresolved = ? WHERE path = ?", updates)
 
 
-def _write_state(vault: Path, stats: IndexStats) -> None:
+def _write_state(vault: Path, stats: IndexStats, *, estate: EstateScope | None = None) -> None:
     sp = state_path(vault)
     sp.parent.mkdir(parents=True, exist_ok=True)
     state = {
@@ -483,4 +542,6 @@ def _write_state(vault: Path, stats: IndexStats) -> None:
         "last_full_index_at": time.time(),
         "stats": asdict(stats),
     }
+    if estate is not None:
+        state["scope"] = estate.state(vault)
     sp.write_text(json.dumps(state, indent=2, default=str))
