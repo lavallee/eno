@@ -21,11 +21,14 @@ lockstep** — never bump one independently.
 ## Semver rules
 
 - **Patch** — fixes, docs, no surface change.
-- **Minor** — new backward-compatible surface (a CLI subcommand, an MCP tool,
-  an endpoint, an extra).
-- **Major** — breaking CLI flags, MCP tool signatures, index schema, or a
-  change to a load-bearing numeric threshold (tiling similarity bands, drift
-  fuzzy-match cutoff, fold count-check rules). Call these out explicitly.
+- **Minor while Eno is `0.x`** — new surface and intentional breaking changes,
+  including CLI flags, MCP tool signatures, index schema, or a change to a
+  load-bearing numeric threshold. Call breaking changes out explicitly.
+- **Major after `1.0.0`** — breaking changes once the project has explicitly
+  committed to a stable public API.
+
+Do not infer that Eno is ready for `1.0.0` from the size or kind of a change.
+Crossing that boundary requires an explicit maintainer decision.
 
 ## Checklist
 

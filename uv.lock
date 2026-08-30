@@ -192,7 +192,7 @@ wheels = [
 
 [[package]]
 name = "eno-mcp"
-version = "1.0.0"
+version = "0.4.0"
 source = { editable = "packages/eno-mcp" }
 dependencies = [
     { name = "enowiki" },
@@ -207,7 +207,7 @@ requires-dist = [
 
 [[package]]
 name = "eno-service"
-version = "1.0.0"
+version = "0.4.0"
 source = { editable = "packages/eno-service" }
 dependencies = [
     { name = "enowiki" },
@@ -252,7 +252,7 @@ dev = [
 
 [[package]]
 name = "enowiki"
-version = "1.0.0"
+version = "0.4.0"
 source = { editable = "packages/eno" }
 dependencies = [
     { name = "pyyaml" },
