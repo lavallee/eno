@@ -18,7 +18,7 @@
   <div class="wrap">
     <a class="logo" href="./">
       <span class="mark">eno</span>
-      <span class="mark-sub">/ v0.3.0</span>
+      <span class="mark-sub">/ v1.0.0</span>
     </a>
     <nav>
       <a href="#why">why</a>
@@ -73,6 +73,15 @@
             notes. LLM operations are two-phase: cheap planning over the
             index, then targeted reads. Nothing loads your entire vault
             into a prompt.
+          </p>
+        </div>
+        <div class="row">
+          <h3>One surface, many local notebooks</h3>
+          <p>
+            A Flip registry can bound one index to the canonical notebooks
+            scattered through your project repos, while composing a complete
+            vault alongside them. Full-text search returns the owning bundle;
+            worktree copies are shadowed, not read twice.
           </p>
         </div>
         <div class="row">
@@ -141,6 +150,7 @@
       <h3 class="sub">Retrieve, excerpt-first</h3>
 
 <pre class="code"><span class="prompt">$</span> eno search <span class="str">"mechanism design"</span>
+<span class="prompt">$</span> eno search <span class="str">"mechanism design"</span> --kind text
 <span class="prompt">$</span> eno neighbors <span class="str">"2 Projects/Acme/Widget.md"</span>
 <span class="c">→ 4 backlinks · 7 outbound — paths + titles, not full notes</span></pre>
     </div>

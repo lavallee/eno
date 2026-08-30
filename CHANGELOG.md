@@ -7,6 +7,8 @@ workspace move in lockstep.
 
 ## [Unreleased]
 
+## [1.0.0] — 2026-08-30
+
 ### Added
 
 - **Flip-estate indexing** — `eno index --flip-registry PATH` consumes Flip's
@@ -177,7 +179,8 @@ First public release.
 - Vault location is configured via `--vault` or `$ENO_VAULT_DIR`; there is no
   default path.
 
-[Unreleased]: https://github.com/lavallee/eno/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/lavallee/eno/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/lavallee/eno/compare/v0.3.0...v1.0.0
 [0.3.0]: https://github.com/lavallee/eno/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/lavallee/eno/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/lavallee/eno/compare/v0.1.0...v0.1.1
