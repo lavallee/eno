@@ -42,25 +42,56 @@ Write:
 
 Many autonomous agents load MCP servers natively. Two pieces:
 
-**1. Onboarding skill.** Drop the agent brief into a place the agent
-loads from at startup (skill directory, system prompt path, etc.). The
-brief ships in this repo at
-[`skills/agent-onboarding.md`](https://github.com/lavallee/eno/blob/main/packages/eno-mcp/skills/agent-onboarding.md).
+**1. Agent instruction surface.** Evaluated Codex and Claude Code sessions should use the
+minimal [`eno-vault` skill](https://github.com/lavallee/eno/tree/main/packages/eno-mcp/skills/eno-vault).
+It keeps Eno's vault-grounding, concept-versus-drift, and canonical-write
+boundaries without repeating the MCP tool schemas. Its Spindle manifest records
+the exact harness, model, effort, role, build, and Eno tool envelope that have
+been evaluated; an unknown tuple receives the invariant core without a tuned
+claim.
 
 ```sh
-# Whichever of these matches your agent's setup:
-cp skills/agent-onboarding.md \
-   ~/.config/my-agent/skills/
+# From a source checkout:
+cp -R skills/eno-vault ~/.codex/skills/eno-vault
+
+# Portable Claude project fallback (invariant core only):
+cp -R skills/eno-vault /path/to/project/.claude/skills/eno-vault
+```
+
+The direct copies above load the portable invariant core. For evaluated runtime
+routing, a session adapter should ask Spindle to realize this same package from
+the actual requested and served model tuple, then project the immutable result
+into the session-local skill root. The pinned Claude Sonnet 5 explorer profile
+uses the core unchanged; the pinned Claude Opus 5 reviewer profile adds one
+12-word instruction that keeps vault reads on Eno rather than filesystem tools.
+The evaluated mixed-model Claude adapter keeps the parent realization in that
+session-local skill root and supplies a differently modeled child's independent
+realization through its custom-agent system prompt. A child-scoped MCP server
+still requires `mcp__eno__*` in the session permission allowlist. Do not rewrite
+a global installed skill when a session or subagent changes models.
+
+The wheel also carries the skill under `eno_mcp/skills/eno-vault`. Locate an
+installed copy with:
+
+```sh
+python -c 'from importlib.resources import files; print(files("eno_mcp").joinpath("skills", "eno-vault"))'
+```
+
+For unevaluated harnesses or integrations that need a self-contained tool inventory,
+the longer portable brief remains at
+[`skills/agent-onboarding.md`](https://github.com/lavallee/eno/blob/main/packages/eno-mcp/skills/agent-onboarding.md):
+
+```sh
+cp skills/agent-onboarding.md ~/.config/my-agent/skills/
 
 # or, if you sync skills via the vault:
 cp skills/agent-onboarding.md \
    /path/to/vault/.eno/skills/
 ```
 
-The onboarding brief covers the postures (resurfacing > collecting,
-incipient links are intentional, two-phase reads), the tool inventory,
-and common patterns. Self-contained. Read it yourself before deploying
-— it's the contract the agent will operate under.
+The onboarding brief is cross-harness integration material, not the tuned
+Codex/Claude runtime surface. Read whichever artifact you deploy—the selected
+instructions are the contract the agent will operate under.
 
 **2. MCP config.** Add eno-mcp to the agent's MCP config — typically
 `~/.config/my-agent/mcp.json` or whatever your install expects. If you

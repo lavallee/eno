@@ -1,0 +1,4 @@
+interface:
+  display_name: "Eno Vault"
+  short_description: "Ground agent work in an Eno vault"
+  default_prompt: "Use $eno-vault to answer this question from the connected Eno vault."

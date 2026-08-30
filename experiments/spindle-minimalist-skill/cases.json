@@ -1,0 +1,144 @@
+[
+  {
+    "id": "active-surface",
+    "suite": "baseline",
+    "prompt": "Using the connected Eno vault, tell me which two areas I should pick up next. Give a concise reason grounded in the vault and name the supporting note paths. Do not modify the vault.",
+    "required_tools": ["eno_hot"],
+    "required_term_groups": [
+      ["Map of Content - Learning"],
+      ["Building a Research Workflow"]
+    ],
+    "forbidden_tools": ["eno_create_note", "eno_append_to_note"],
+    "expected_changed_paths": []
+  },
+  {
+    "id": "link-semantics",
+    "suite": "baseline",
+    "prompt": "I want to clean up all the broken links in this vault. Give me one concrete link bug to fix first and one unresolved link I should not treat as a bug, with source-path evidence for each. Do not modify the vault.",
+    "required_tools": ["eno_drift", "eno_concepts"],
+    "required_term_groups": [
+      ["spaced-repetition", "Systems  Thinking", "Feynman Technique"],
+      ["Second Brain", "Deliberate Practice", "Cognitive Load", "Digital Minimalism", "Flow State"]
+    ],
+    "forbidden_tools": ["eno_create_note", "eno_append_to_note"],
+    "expected_changed_paths": []
+  },
+  {
+    "id": "write-existing",
+    "suite": "baseline",
+    "prompt": "Add a two-sentence paragraph explaining why Active Recall and Spaced Repetition work better together to the best existing note in the connected Eno vault. Preserve provenance and do not create a duplicate note.",
+    "required_tool_groups": [
+      ["eno_search", "eno_note"],
+      ["eno_append_to_note"]
+    ],
+    "required_term_groups": [
+      ["Active Recall"],
+      ["Spaced Repetition"]
+    ],
+    "forbidden_tools": ["eno_create_note"],
+    "expected_write_path": "2 Research Areas/Synthesis - Spaced Repetition and Active Recall.md",
+    "expected_changed_paths": [
+      "2 Research Areas/Synthesis - Spaced Repetition and Active Recall.md"
+    ]
+  },
+  {
+    "id": "heldout-link-01",
+    "suite": "heldout-semantic",
+    "prompt": "Review the connected vault's unresolved wikilinks. Identify one maintenance error that should be corrected and one promising concept seed that should remain unresolved for now. Cite the source path for each and do not modify anything.",
+    "required_tools": ["eno_drift", "eno_concepts"],
+    "required_term_groups": [
+      ["spaced-repetition", "Systems  Thinking", "Feynman Technique"],
+      ["Second Brain", "Deliberate Practice", "Cognitive Load", "Digital Minimalism", "Flow State"]
+    ],
+    "forbidden_tools": ["eno_create_note", "eno_append_to_note"],
+    "expected_changed_paths": []
+  },
+  {
+    "id": "heldout-link-02",
+    "suite": "heldout-semantic",
+    "prompt": "Triage the vault's link debt without editing it. Give the editor one likely malformed reference to an existing note and one repeatedly mentioned missing idea that is editorial groundwork rather than a defect. Include evidence paths.",
+    "required_tools": ["eno_drift", "eno_concepts"],
+    "required_term_groups": [
+      ["spaced-repetition", "Systems  Thinking", "Feynman Technique"],
+      ["Second Brain", "Deliberate Practice", "Cognitive Load", "Digital Minimalism", "Flow State"]
+    ],
+    "forbidden_tools": ["eno_create_note", "eno_append_to_note"],
+    "expected_changed_paths": []
+  },
+  {
+    "id": "heldout-link-03",
+    "suite": "heldout-semantic",
+    "prompt": "If I can fix only one link-quality problem today, which unresolved reference should I normalize first? Also name one absent target I should deliberately leave alone because it represents future knowledge work. Ground both choices in the connected vault and make no changes.",
+    "required_tools": ["eno_drift", "eno_concepts"],
+    "required_term_groups": [
+      ["spaced-repetition", "Systems  Thinking", "Feynman Technique"],
+      ["Second Brain", "Deliberate Practice", "Cognitive Load", "Digital Minimalism", "Flow State"]
+    ],
+    "forbidden_tools": ["eno_create_note", "eno_append_to_note"],
+    "expected_changed_paths": []
+  },
+  {
+    "id": "heldout-link-04",
+    "suite": "heldout-semantic",
+    "prompt": "Prepare a two-item link-health memo from the connected vault: one probable typo or near-match that points toward an existing page, and one uncreated idea whose mentions show intentional demand. Supply source paths and keep the pass read-only.",
+    "required_tools": ["eno_drift", "eno_concepts"],
+    "required_term_groups": [
+      ["spaced-repetition", "Systems  Thinking", "Feynman Technique"],
+      ["Second Brain", "Deliberate Practice", "Cognitive Load", "Digital Minimalism", "Flow State"]
+    ],
+    "forbidden_tools": ["eno_create_note", "eno_append_to_note"],
+    "expected_changed_paths": []
+  },
+  {
+    "id": "heldout-link-05",
+    "suite": "heldout-semantic",
+    "prompt": "Tell a vault editor which unresolved reference warrants mechanical cleanup and which unresolved reference instead signals a concept worth developing. Use the connected Eno evidence, identify where each appears, and do not write to the vault.",
+    "required_tools": ["eno_drift", "eno_concepts"],
+    "required_term_groups": [
+      ["spaced-repetition", "Systems  Thinking", "Feynman Technique"],
+      ["Second Brain", "Deliberate Practice", "Cognitive Load", "Digital Minimalism", "Flow State"]
+    ],
+    "forbidden_tools": ["eno_create_note", "eno_append_to_note"],
+    "expected_changed_paths": []
+  },
+  {
+    "id": "unrelated-arithmetic",
+    "suite": "negative",
+    "prompt": "Calculate 17 multiplied by 19. Answer with just the integer.",
+    "required_term_groups": [["323"]],
+    "forbidden_tool_prefixes": ["eno_"],
+    "expected_changed_paths": []
+  },
+  {
+    "id": "unrelated-uppercase",
+    "suite": "negative",
+    "prompt": "Convert the word spindle to uppercase. Answer with only the converted word.",
+    "required_term_groups": [["SPINDLE"]],
+    "forbidden_tool_prefixes": ["eno_"],
+    "expected_changed_paths": []
+  },
+  {
+    "id": "unrelated-geography",
+    "suite": "negative",
+    "prompt": "What is the capital of Vermont? Answer with only the city name.",
+    "required_term_groups": [["Montpelier"]],
+    "forbidden_tool_prefixes": ["eno_"],
+    "expected_changed_paths": []
+  },
+  {
+    "id": "unrelated-sorting",
+    "suite": "negative",
+    "prompt": "Sort these words alphabetically: slate, amber, cedar. Answer exactly as a comma-separated list.",
+    "required_term_groups": [["amber, cedar, slate"]],
+    "forbidden_tool_prefixes": ["eno_"],
+    "expected_changed_paths": []
+  },
+  {
+    "id": "unrelated-prime",
+    "suite": "negative",
+    "prompt": "What is the smallest prime number greater than 29? Answer with just the integer.",
+    "required_term_groups": [["31"]],
+    "forbidden_tool_prefixes": ["eno_"],
+    "expected_changed_paths": []
+  }
+]

@@ -1,0 +1,80 @@
+{
+  "schema_version": 1,
+  "date": "2026-07-30",
+  "decision": "promote-invariant-core-for-pinned-codex-profiles",
+  "environment": {
+    "codex_cli_version": "0.146.0",
+    "eno_toolset_digest": "sha256:040f23cbde0b3981075ea9cf328c0011e93fd4ed60718d0754ac3d6110a70783",
+    "vault": "public-26-note-demo-copy-per-run"
+  },
+  "promoted_package": {
+    "path": "packages/eno-mcp/skills/eno-vault",
+    "skill_words": 145,
+    "skill_bytes": 970,
+    "skill_sha256": "571d7923ed271dbd84b32f6a46788fbb9117fd358c19dac70a79284a591b8c40",
+    "manifest_sha256": "9f290cfaaf7ff4d422cbb2e8bfe80c6098eaf2d63626c7451b8d16fa00207224",
+    "package_digest": "1c28084949d0a49014dd2681cbc662db17159decb598e804519e6a7448191998",
+    "overlays": []
+  },
+  "batches": {
+    "heldout_generalization_and_implicit": "20260729T234605Z-951120",
+    "terra_semantic_stability": "20260729T235438Z-a8b1e1",
+    "expanded_negatives": "20260729T235657Z-216d27",
+    "terra_write_stability": "20260729T235822Z-07d626",
+    "revised_write_regression": "20260730T000308Z-0ee900",
+    "production_smoke": "20260730T001051Z-937c93",
+    "production_mixed_routing": "20260730T001258Z-09d9ca"
+  },
+  "heldout_semantic": [
+    {"model": "gpt-5.6-sol", "arm": "none", "full_runs": "4/5", "checks": "34/35", "median_input_tokens": 128287, "median_duration_seconds": 40.290},
+    {"model": "gpt-5.6-sol", "arm": "incumbent", "full_runs": "5/5", "checks": "35/35", "median_input_tokens": 144168, "median_duration_seconds": 52.335},
+    {"model": "gpt-5.6-sol", "arm": "core", "full_runs": "5/5", "checks": "35/35", "median_input_tokens": 122633, "median_duration_seconds": 49.746},
+    {"model": "gpt-5.6-terra", "arm": "none", "full_runs": "5/5", "checks": "35/35", "median_input_tokens": 120106, "median_duration_seconds": 28.108},
+    {"model": "gpt-5.6-terra", "arm": "incumbent", "full_runs": "5/5", "checks": "35/35", "median_input_tokens": 112613, "median_duration_seconds": 29.256},
+    {"model": "gpt-5.6-terra", "arm": "core", "full_runs": "5/5", "checks": "35/35", "median_input_tokens": 97774, "median_duration_seconds": 27.583}
+  ],
+  "implicit_semantic_core": [
+    {"model": "gpt-5.6-sol", "full_runs": "5/5", "checks": "35/35", "median_input_tokens": 140640, "median_duration_seconds": 44.454},
+    {"model": "gpt-5.6-terra", "full_runs": "5/5", "checks": "35/35", "median_input_tokens": 93460, "median_duration_seconds": 28.398}
+  ],
+  "terra_semantic_stability": [
+    {"arm": "none", "full_runs": "1/5", "checks": "19/35", "median_input_tokens": 53289, "median_duration_seconds": 14.604, "median_eno_calls": 0},
+    {"arm": "incumbent", "full_runs": "4/5", "checks": "34/35", "median_input_tokens": 112087, "median_duration_seconds": 29.067, "median_eno_calls": 6},
+    {"arm": "core", "full_runs": "5/5", "checks": "35/35", "median_input_tokens": 79909, "median_duration_seconds": 21.352, "median_eno_calls": 5}
+  ],
+  "write_stability": {
+    "none": "5/5",
+    "incumbent": "5/5",
+    "core": "5/5",
+    "changed_paths": ["2 Research Areas/Synthesis - Spaced Repetition and Active Recall.md"],
+    "create_calls": 0,
+    "revised_core_regression": "5/5",
+    "revised_core_inline_attribution_comments": 0
+  },
+  "negative_controls": {
+    "trials": 20,
+    "full_passes": 20,
+    "eno_calls": 0,
+    "vault_changes": 0
+  },
+  "production_smoke": {
+    "trials": 6,
+    "full_passes": 6,
+    "package_digest": "1c28084949d0a49014dd2681cbc662db17159decb598e804519e6a7448191998"
+  },
+  "production_mixed": {
+    "score": "7/7",
+    "changed_paths": [],
+    "parent_profile": "codex-sol-reviewer-2026-07",
+    "parent_realization_digest": "74a37524d9392e1ac630246821df20763768ecb64e0b1e8c07cd9628ee44fc36",
+    "child_profile": "codex-terra-explorer-2026-07",
+    "child_realization_digest": "41f0338b1e070876ec762b761ab25191a68037ce9dc80c4d31930386e8b8ef10",
+    "child_served_model": "gpt-5.6-terra",
+    "child_effort": "medium",
+    "child_tools": ["eno_drift", "eno_concepts", "eno_note", "eno_note", "eno_note", "eno_note"]
+  },
+  "fallback_probes": {
+    "changed_harness_build": {"status": "unresolved", "tuned": false, "strict_exit": 2},
+    "changed_toolset_digest": {"status": "unresolved", "tuned": false, "strict_exit": 2}
+  }
+}

@@ -1,0 +1,24 @@
+schema_version = 1
+
+[[profile]]
+id = "claude-sonnet-explorer-candidate"
+
+[profile.match]
+harness = "claude"
+model = "claude-sonnet-5"
+effort = "medium"
+role = "explorer"
+harness_build = "2.1.220"
+toolset_digest = "sha256:040f23cbde0b3981075ea9cf328c0011e93fd4ed60718d0754ac3d6110a70783"
+
+[[profile]]
+id = "claude-opus-reviewer-candidate"
+overlay = "overlays/claude-opus-vault-access.md"
+
+[profile.match]
+harness = "claude"
+model = "claude-opus-5"
+effort = "high"
+role = "reviewer"
+harness_build = "2.1.220"
+toolset_digest = "sha256:040f23cbde0b3981075ea9cf328c0011e93fd4ed60718d0754ac3d6110a70783"

@@ -1,0 +1,20 @@
+batch	case	arm	model	score	input_tokens	output_tokens	duration_seconds	tools	changed_paths
+20260729T211522Z-94341f	link-semantics	core	gpt-5.6-terra	7/7	79951	665	22.922	eno_drift,eno_concepts,eno_note,eno_note,eno_note	none
+20260729T211522Z-94341f	link-semantics	incumbent	gpt-5.6-sol	7/7	223066	1172	47.182	eno_hot,eno_drift,eno_concepts,eno_note,eno_note,eno_search	none
+20260729T211522Z-94341f	link-semantics	incumbent	gpt-5.6-terra	7/7	102218	784	24.173	eno_hot,eno_drift,eno_concepts,eno_note,eno_note,eno_note	none
+20260729T211522Z-94341f	link-semantics	none	gpt-5.6-sol	7/7	160141	1339	38.302	eno_drift,eno_concepts,eno_broken_links,eno_note,eno_note,eno_note,eno_note,eno_note	none
+20260729T211522Z-94341f	link-semantics	none	gpt-5.6-terra	3/7	53342	435	15.622	none	none
+20260729T211522Z-94341f	link-semantics	profiled	gpt-5.6-sol	7/7	103008	940	32.757	eno_drift,eno_concepts,eno_note,eno_note,eno_note,eno_note	none
+20260729T211522Z-94341f	link-semantics	profiled	gpt-5.6-terra	7/7	97729	714	27.439	eno_hot,eno_drift,eno_concepts,eno_note,eno_note,eno_note	none
+20260729T211755Z-72ab03	active-surface	core	gpt-5.6-terra	6/6	107018	544	22.718	eno_hot,eno_note,eno_note,eno_note,eno_note,eno_neighbors,eno_neighbors	none
+20260729T211755Z-72ab03	active-surface	incumbent	gpt-5.6-terra	6/6	95799	791	27.743	eno_hot,eno_note,eno_neighbors,eno_note,eno_neighbors,eno_note,eno_note	none
+20260729T211755Z-72ab03	active-surface	none	gpt-5.6-terra	6/6	78629	664	32.387	eno_hot,eno_note,eno_note,eno_note,eno_note	none
+20260729T211755Z-72ab03	active-surface	profiled	gpt-5.6-terra	6/6	74214	675	23.235	eno_hot,eno_note,eno_note,eno_neighbors,eno_neighbors	none
+20260729T211755Z-72ab03	link-semantics	core	gpt-5.6-terra	7/7	79659	523	21.462	eno_drift,eno_concepts,eno_note,eno_note	none
+20260729T211755Z-72ab03	link-semantics	incumbent	gpt-5.6-terra	7/7	112143	847	26.439	eno_hot,eno_drift,eno_concepts,eno_note,eno_note	none
+20260729T211755Z-72ab03	link-semantics	none	gpt-5.6-terra	3/7	53318	416	15.585	none	none
+20260729T211755Z-72ab03	link-semantics	profiled	gpt-5.6-terra	7/7	72030	516	18.637	eno_hot,eno_drift,eno_concepts	none
+20260729T211755Z-72ab03	write-existing	core	gpt-5.6-terra	7/7	101817	788	25.408	eno_search,eno_search,eno_search,eno_search,eno_note,eno_note,eno_note,eno_append_to_note	2 Research Areas/Synthesis - Spaced Repetition and Active Recall.md
+20260729T214120Z-253808	write-existing	incumbent	gpt-5.6-terra	7/7	106655	804	30.240	eno_hot,eno_search,eno_search,eno_search,eno_search,eno_note,eno_note,eno_note,eno_neighbors,eno_append_to_note	2 Research Areas/Synthesis - Spaced Repetition and Active Recall.md
+20260729T211755Z-72ab03	write-existing	none	gpt-5.6-terra	7/7	102856	544	21.706	eno_search,eno_search,eno_search,eno_note,eno_append_to_note	2 Research Areas/Synthesis - Spaced Repetition and Active Recall.md
+20260729T211755Z-72ab03	write-existing	profiled	gpt-5.6-terra	7/7	109806	770	29.068	eno_hot,eno_note,eno_neighbors,eno_append_to_note	2 Research Areas/Synthesis - Spaced Repetition and Active Recall.md

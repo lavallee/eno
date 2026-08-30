@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "date": "2026-07-30",
+  "decision": "support-pinned-claude-mixed-parent-child-adapter",
+  "environment": {
+    "claude_code_version": "2.1.220",
+    "eno_toolset_digest": "sha256:040f23cbde0b3981075ea9cf328c0011e93fd4ed60718d0754ac3d6110a70783",
+    "vault": "public-26-note-demo-copy-per-run",
+    "permission_mode": "dontAsk",
+    "session_persistence": false,
+    "forward_subagent_text": true
+  },
+  "batch": "20260730T133831Z-504f99",
+  "source_package": {
+    "path": "packages/eno-mcp/skills/eno-vault",
+    "package_digest": "c2988e29040091baa3446f04df2ab61dcca813de8c0ce4796a9db3098cdbc290"
+  },
+  "adapter": {
+    "parent_projection": "preload the parent realization as the main custom agent skill",
+    "child_projection": "append the independently realized child body to the child custom agent system prompt",
+    "child_mcp_scope": "inline Eno server in the child agent definition",
+    "session_allowlist": ["Agent", "mcp__eno__*"],
+    "subagent_model_override_environment": "removed",
+    "builtin_subagents": "disabled"
+  },
+  "gate": {
+    "trials": 6,
+    "full_passes": 6,
+    "checks": "108/108",
+    "permission_denials": 0,
+    "parent_eno_calls": 0,
+    "vault_changes": 0,
+    "total_cost_usd": 0.8684771
+  },
+  "directions": [
+    {
+      "parent_model": "claude-opus-5",
+      "parent_profile": "claude-opus-reviewer-2026-07",
+      "parent_overlay": "overlays/claude-opus-vault-access.md",
+      "parent_realization_digest": "d840b755f63c8c89dc71e35ce4e867105a6f5b7db2a05070cc156812495944ae",
+      "child_model": "claude-sonnet-5",
+      "child_raw_resolved_models": ["claude-sonnet-5"],
+      "child_forwarded_models": ["claude-sonnet-5"],
+      "child_profile": "claude-sonnet-explorer-2026-07",
+      "child_overlay": null,
+      "child_realization_digest": "c3423fcfc4355e06b04f90455b6f2e75fd507c7115b1d684fddd1e04e6a66051",
+      "runs": 3,
+      "full_passes": 3,
+      "checks": "54/54",
+      "completed_child_eno_calls": 16,
+      "median_cost_usd": 0.101078,
+      "median_duration_seconds": 42.2
+    },
+    {
+      "parent_model": "claude-sonnet-5",
+      "parent_profile": "claude-sonnet-explorer-2026-07",
+      "parent_overlay": null,
+      "parent_realization_digest": "c3423fcfc4355e06b04f90455b6f2e75fd507c7115b1d684fddd1e04e6a66051",
+      "child_model": "claude-opus-5",
+      "child_raw_resolved_models": ["claude-opus-5[1m]"],
+      "child_forwarded_models": ["claude-opus-5"],
+      "child_profile": "claude-opus-reviewer-2026-07",
+      "child_overlay": "overlays/claude-opus-vault-access.md",
+      "child_realization_digest": "d840b755f63c8c89dc71e35ce4e867105a6f5b7db2a05070cc156812495944ae",
+      "runs": 3,
+      "full_passes": 3,
+      "checks": "54/54",
+      "completed_child_eno_calls": 27,
+      "median_cost_usd": 0.1921661,
+      "median_duration_seconds": 62.823
+    }
+  ],
+  "model_evidence": {
+    "agent_result": "retain raw resolvedModel and compare its canonical model ID",
+    "forwarded_child_messages": "all child assistant messages must report the requested canonical model",
+    "opus_runtime_variant": "claude-opus-5[1m] canonicalizes to claude-opus-5"
+  },
+  "failure_shields": [
+    "A child-scoped MCP server still requires its tool namespace in the session allowlist.",
+    "Do not use the parent skill registry for a differently modeled child realization.",
+    "Do not trust configured model alone; require Agent resolvedModel and forwarded child message evidence.",
+    "Do not mutate a global installed skill to switch parent or child profiles."
+  ]
+}

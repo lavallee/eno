@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "batch": "20260729T213945Z-d4dfb4",
+  "score": "7/7",
+  "changed_paths": [],
+  "parent": {
+    "harness": "codex",
+    "model": "gpt-5.6-sol",
+    "effort": "high",
+    "role": "reviewer",
+    "profile_id": "codex-sol-reviewer-candidate",
+    "profile_overlay": null,
+    "realization_digest": "3332f82c65f73df5b7251689fd5077d5163a3f6e3d00eb798a75fba852886d6a",
+    "discovery_isolated": true
+  },
+  "child": {
+    "harness": "codex",
+    "model": "gpt-5.6-terra",
+    "effort": "medium",
+    "role": "explorer",
+    "profile_id": "codex-terra-explorer-candidate",
+    "profile_overlay": "overlays/codex-terra-explorer.md",
+    "realization_digest": "595b76fb8bd3871e056793e5280ac42803a7d270b5458c3305201cf566885a20",
+    "projection": "custom-agent-developer-instructions",
+    "projection_marker_observed": true,
+    "eno_tools": [
+      "eno_hot",
+      "eno_drift",
+      "eno_concepts",
+      "eno_note",
+      "eno_note",
+      "eno_note",
+      "eno_note",
+      "eno_search"
+    ]
+  },
+  "skill_sources": {
+    "candidate_core_sha256": "009648c8882026e712ab64589a57ed7897f69fdba688232bfceeae0288c6ead9",
+    "candidate_overlay_sha256": "6c20f5f0d2f01864381b6d3010e56a688d99682440612904c2dc7abf1398bbfc",
+    "incumbent_sha256": "eba9631b47de84e5596e680194ea670a0b549239f5815de8abc2d8e545aa82fa"
+  },
+  "codex_cli_version": "0.146.0"
+}

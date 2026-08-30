@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "date": "2026-07-30",
+  "decision": "promote-pinned-claude-profiles-with-opus-overlay",
+  "environment": {
+    "claude_code_version": "2.1.220",
+    "models": ["claude-sonnet-5", "claude-opus-5"],
+    "eno_toolset_digest": "sha256:040f23cbde0b3981075ea9cf328c0011e93fd4ed60718d0754ac3d6110a70783",
+    "vault": "public-26-note-demo-copy-per-run",
+    "permission_mode": "dontAsk",
+    "session_persistence": false
+  },
+  "promoted_package": {
+    "path": "packages/eno-mcp/skills/eno-vault",
+    "skill_words": 145,
+    "skill_bytes": 970,
+    "skill_sha256": "571d7923ed271dbd84b32f6a46788fbb9117fd358c19dac70a79284a591b8c40",
+    "manifest_sha256": "8db77ec8ea5e8c9b92ca86dcfd6fd80d52c3f6da387edc8e1e3dceb5bf272f62",
+    "package_digest": "c2988e29040091baa3446f04df2ab61dcca813de8c0ce4796a9db3098cdbc290",
+    "opus_overlay": {
+      "path": "overlays/claude-opus-vault-access.md",
+      "words": 12,
+      "bytes": 73,
+      "sha256": "53e9444f63004db12c997db96c8b0b352ccb95737178ce11ceb3815938654c3a"
+    }
+  },
+  "batches": {
+    "smoke": "20260730T020057Z-7fff07",
+    "semantic_stability": "20260730T020701Z-1e81b7",
+    "implicit_semantic": "20260730T021233Z-ca604f",
+    "negative_controls": "20260730T021602Z-7eb9f4",
+    "opus_overlay": "20260730T021857Z-420c64",
+    "production_smoke": "20260730T022412Z-61c88f"
+  },
+  "all_valid_trials": {
+    "trials": 79,
+    "full_passes": 71,
+    "checks": "441/449",
+    "total_cost_usd": 16.472031,
+    "minimal_core_profiled_or_production": {
+      "trials": 51,
+      "full_passes": 51,
+      "checks": "301/301",
+      "unexpected_vault_changes": 0
+    }
+  },
+  "semantic_stability": [
+    {"model": "claude-sonnet-5", "arm": "none", "full_runs": "1/4", "checks": "25/28", "median_context_tokens": 151503, "median_cost_usd": 0.1675113, "median_duration_seconds": 19.026},
+    {"model": "claude-sonnet-5", "arm": "incumbent", "full_runs": "4/4", "checks": "28/28", "median_context_tokens": 160119, "median_cost_usd": 0.1920453, "median_duration_seconds": 17.809},
+    {"model": "claude-sonnet-5", "arm": "core", "full_runs": "4/4", "checks": "28/28", "median_context_tokens": 111244, "median_cost_usd": 0.1381248, "median_duration_seconds": 13.584},
+    {"model": "claude-opus-5", "arm": "none", "full_runs": "3/4", "checks": "27/28", "median_context_tokens": 275772, "median_cost_usd": 0.4232775, "median_duration_seconds": 72.701},
+    {"model": "claude-opus-5", "arm": "incumbent", "full_runs": "0/4", "checks": "24/28", "median_context_tokens": 260949, "median_cost_usd": 0.359231, "median_duration_seconds": 49.562},
+    {"model": "claude-opus-5", "arm": "core", "full_runs": "4/4", "checks": "28/28", "median_context_tokens": 249856, "median_cost_usd": 0.393432, "median_duration_seconds": 51.588}
+  ],
+  "implicit_semantic_core": [
+    {"model": "claude-sonnet-5", "full_runs": "5/5", "checks": "35/35", "median_context_tokens": 143996, "median_cost_usd": 0.1515812, "median_duration_seconds": 21.462, "median_eno_calls": 2},
+    {"model": "claude-opus-5", "full_runs": "5/5", "checks": "35/35", "median_context_tokens": 244818, "median_cost_usd": 0.382594, "median_duration_seconds": 53.701, "median_eno_calls": 8}
+  ],
+  "negative_controls": {
+    "trials": 20,
+    "full_passes": 20,
+    "eno_calls": 0,
+    "vault_changes": 0
+  },
+  "opus_overlay_comparison": {
+    "core": {"full_runs": "9/9", "checks": "63/63", "filesystem_denial_trials": "7/9", "filesystem_denial_attempts": 17, "median_context_tokens": 244818, "median_cost_usd": 0.382594, "median_duration_seconds": 52.979, "median_eno_calls": 7},
+    "overlay": {"full_runs": "9/9", "checks": "63/63", "filesystem_denial_trials": "0/9", "filesystem_denial_attempts": 0, "median_context_tokens": 148518, "median_cost_usd": 0.295321, "median_duration_seconds": 39.642, "median_eno_calls": 6}
+  },
+  "production_smoke": {
+    "trials": 8,
+    "full_passes": 8,
+    "checks": "48/48",
+    "served_model_matches": 8,
+    "skill_discoveries": 8,
+    "permission_denials": 0,
+    "eno_tool_errors": 0,
+    "profiles": {
+      "claude-sonnet-5": {"id": "claude-sonnet-explorer-2026-07", "overlay": null},
+      "claude-opus-5": {"id": "claude-opus-reviewer-2026-07", "overlay": "overlays/claude-opus-vault-access.md"}
+    }
+  },
+  "fallback_probe": {
+    "requested_model": "claude-opus-5",
+    "served_model": "claude-sonnet-5",
+    "status": "unresolved",
+    "reason": "requested-served-model-mismatch",
+    "tuned": false,
+    "strict_exit": 2
+  }
+}
