@@ -55,9 +55,9 @@ def main() -> int:
     # Plugin manifest (JSON).
     manifest = ROOT / "packages/eno-plugin/manifest.json"
     try:
-        versions["eno-plugin/manifest"] = json.loads(
-            manifest.read_text(encoding="utf-8")
-        )["version"]
+        versions["eno-plugin/manifest"] = json.loads(manifest.read_text(encoding="utf-8"))[
+            "version"
+        ]
     except (OSError, KeyError, json.JSONDecodeError) as e:
         print(f"  ! eno-plugin/manifest: cannot read version ({e})")
         ok = False
@@ -73,7 +73,15 @@ def main() -> int:
         print("\nFAIL: one or more versions could not be read")
         return 1
 
-    print(f"\nOK: all packages at {distinct.pop()}")
+    version = distinct.pop()
+    if not version.startswith("0."):
+        print(
+            "\nFAIL: Eno remains on the pre-stable 0.x line; crossing 1.0 "
+            "requires an explicit maintainer policy change"
+        )
+        return 1
+
+    print(f"\nOK: all packages at {version}")
     return 0
 
 
