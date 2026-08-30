@@ -160,7 +160,7 @@ def test_state_json_written(tmp_path: Path):
     import json
 
     state = json.loads(sp.read_text())
-    assert state["schema_version"] == 3
+    assert state["schema_version"] == 4
     assert "last_full_index_at" in state
     assert state["stats"]["parsed"] == 1
 
@@ -408,6 +408,33 @@ def test_workspace_entry_to_missing_bundle_ignored(flip_vault: Path):
     assert _target_of(db, "Notes.md", "hosm:C1") == "research/hosm/claims/claim-one.md"
 
 
+def test_nested_repo_workspaces_scope_the_same_handle(tmp_path: Path):
+    for repo, title in (("repo-a", "Alpha"), ("repo-b", "Beta")):
+        _write(
+            tmp_path, f"{repo}/.flip/workspace.toml",
+            '[notebooks]\nshared = "notebooks/shared"\n',
+        )
+        _write(
+            tmp_path, f"{repo}/notebooks/shared/index.md",
+            f'---\nokf_version: "0.2"\nflip: "0.9"\n---\n# {title}\n',
+        )
+        _write(
+            tmp_path, f"{repo}/notebooks/shared/references/source.md",
+            f"---\nid: A1\naliases: [A1, shared:A1]\n---\n# {title} source\n",
+        )
+        _write(tmp_path, f"{repo}/Notes.md", f"# {title} notes\n\n[[shared:A1]]\n")
+
+    stats = index_vault(tmp_path)
+    assert stats.flip_handles == 2
+    db = sqlite3.connect(index_path(tmp_path))
+    assert _target_of(db, "repo-a/Notes.md", "shared:A1") == (
+        "repo-a/notebooks/shared/references/source.md"
+    )
+    assert _target_of(db, "repo-b/Notes.md", "shared:A1") == (
+        "repo-b/notebooks/shared/references/source.md"
+    )
+
+
 def test_v1_index_db_rebuilt_on_open(tmp_path: Path):
     """A pre-flip index.db (user_version 0, old-shape tables) is dropped and
     rebuilt instead of crashing the new INSERT."""
@@ -441,7 +468,7 @@ def test_v1_index_db_rebuilt_on_open(tmp_path: Path):
     assert stats.parsed == 2  # full reparse: the rebuilt notes table came back empty
     db = sqlite3.connect(db_path)
     (uv,) = db.execute("PRAGMA user_version").fetchone()
-    assert uv == 3
+    assert uv == 4
     paths = sorted(r[0] for r in db.execute("SELECT path FROM notes"))
     assert paths == ["X.md", "Y.md"]  # stale row gone
     assert _target_of(db, "X.md", "Y") == "Y.md"

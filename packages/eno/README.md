@@ -27,12 +27,21 @@ export ENO_VAULT_DIR=~/vault      # or pass --vault to any command
 eno index                         # build the index (writes <vault>/.eno/index.db)
 eno hygiene                       # frontmatter contract audit
 eno search "mechanism design"     # paths + excerpts, not full notes
+eno search "mechanism design" --kind text  # full-text body search
 ```
 
 There is no default vault path — a tool that operates on your notes should
 never guess which directory that is. Set `$ENO_VAULT_DIR` or pass `--vault`.
 The index lives at `<vault>/.eno/` (override with `$ENO_DIR`). Add `--json` to
 any command for machine-readable output.
+
+For a project estate, run `flip index --root /path/to/Projects`, set the eno
+vault to that common Projects directory, and pass the resulting registry to
+`eno index --flip-registry ...`. Eno indexes one visible filesystem copy per
+Flip UID instead of every repo document or worktree clone. Repeat
+`--include-root NAME` to compose complete roots such as an Obsidian vault.
+Use `ENO_READ_ONLY=1` for a shared retrieval process whose writes must remain
+with the owning notebooks.
 
 ## What it does
 

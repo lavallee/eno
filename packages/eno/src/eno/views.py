@@ -17,6 +17,8 @@ class Hit:
     title: str
     score: float = 0.0
     matched_in: str = ""
+    bundle_path: str | None = None
+    bundle_handle: str | None = None
 
 
 @dataclass

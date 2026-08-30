@@ -32,7 +32,7 @@ Host and port come from `$ENO_SERVICE_HOST` / `$ENO_SERVICE_PORT` (defaults
 Read (GET):
 
 - `/health` — liveness + configured vault path
-- `/search` — notes by title substring or tag
+- `/search` — notes by title substring, body text, or tag
 - `/note` — frontmatter + headings + excerpt for one note
 - `/neighbors` — backlinks + outbound for one note
 - `/orphans` — notes with no inbound links

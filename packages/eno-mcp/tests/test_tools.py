@@ -2,6 +2,7 @@
 The MCP wire layer is not tested here — that's FastMCP's job. We test that each
 tool returns the right shape on success and a clean error dict on failure."""
 
+import json
 from pathlib import Path
 
 import pytest
@@ -48,6 +49,18 @@ def test_note_missing_returns_null(vault):
     out = tools.eno_note("Nope.md")
     assert out["note"] is None
     assert "hint" in out
+
+
+def test_write_tools_refuse_when_eno_is_read_only(vault, monkeypatch):
+    monkeypatch.setenv("ENO_READ_ONLY", "1")
+    created = tools.eno_create_note("Nope.md", "Nope")
+    appended = tools.eno_append_to_note("Alpha.md", "must not land")
+    assert created["ok"] is False
+    assert appended["ok"] is False
+    assert "read-only" in created["error"]
+    assert "read-only" in appended["error"]
+    assert not (vault / "Nope.md").exists()
+    assert "must not land" not in (vault / "Alpha.md").read_text()
 
 
 def test_neighbors(vault):
@@ -231,6 +244,24 @@ def test_health_local_ok(vault):
     out = tools.eno_health()
     assert out["ok"] is True
     assert out["mode"] == "local"
+    assert out["read_only"] is False
+    assert out["scope"] is None
+
+
+def test_health_reports_estate_scope(vault):
+    state = vault / ".eno" / "state.json"
+    payload = json.loads(state.read_text())
+    payload["scope"] = {
+        "mode": "flip-estate",
+        "notebooks_indexed": 7,
+        "shadowed_copies": 2,
+    }
+    state.write_text(json.dumps(payload))
+    out = tools.eno_health()
+    assert out["scope"]["mode"] == "flip-estate"
+    assert out["scope"]["notebooks_indexed"] == 7
+    assert out["scope"]["shadowed_copies"] == 2
+    assert "roots" not in out["scope"]
 
 
 def test_health_local_no_index(tmp_path: Path, monkeypatch):

@@ -19,7 +19,7 @@ config (below).
 ## Tools
 
 Read:
-- `eno_search` — find notes by title or tag
+- `eno_search` — find notes by title, body text, or tag; Flip results name their owning bundle
 - `eno_note` — frontmatter + headings + ~400-char excerpt for one note
 - `eno_neighbors` — backlinks + outbound for one note
 - `eno_orphans` — notes with no inbound links (resurfacing)
@@ -140,6 +140,13 @@ on a shared host (so multiple agents share one index):
 `ENO_AGENT_NAME=Weaver` is what makes new notes get
 `author: '[[Weaver]]'` automatically — the AGENTS.md convention that
 keeps provenance legible without per-call ceremony.
+
+For one read surface across repo-local Flip notebooks, point
+`ENO_VAULT_DIR` at their common projects root, point `ENO_DIR` at the seeded
+estate index, and set `ENO_READ_ONLY=1`. `eno_health` then reports the indexed
+notebook and shadow-copy counts. Search results carry `bundle_path`; use that
+path to route an authorized write through the owning repo rather than through
+the shared estate process.
 
 ## Wiring it into other agents
 

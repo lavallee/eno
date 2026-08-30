@@ -8,16 +8,17 @@ rather than raising — gives the agent something actionable.
 
 from __future__ import annotations
 
+import json
 from dataclasses import asdict, is_dataclass
 from typing import Any
 
 from eno.backend import ServiceBackend, make_backend
 from eno.client import ClientError
-from eno.config import index_path
+from eno.config import index_path, read_only, state_path
 
 _BACKEND_HINT = (
     "set $ENO_SERVICE_URL to a running eno-serve, or $ENO_VAULT_DIR to a vault "
-    "path (will use the local .eno/index.db; run `eno index` first)"
+    "path (will use the configured Eno index; run `eno index` first)"
 )
 
 
@@ -38,20 +39,22 @@ def _err(e: Exception, hint: str = _BACKEND_HINT) -> dict[str, Any]:
 def eno_search(
     query: str, kind: str = "title", limit: int = 20
 ) -> dict[str, Any]:
-    """Find notes in the vault by title substring or tag exact-match.
+    """Find notes by title substring, body text, or exact tag.
 
     Use this when the user asks about something they "have a note on" or
     when you want to ground a question in what they've already written.
-    Cheap — index-only, no llm. Always try this before reading files
-    blindly with grep.
+    Cheap — SQLite/FTS only, no model. Use kind='text' when connecting a topic
+    across repo-local notebooks; results name each note's Flip bundle when it
+    has one. Always try this before reading files blindly with grep.
 
     Args:
-        query: substring (kind='title') or exact tag (kind='tag').
-        kind: 'title' or 'tag'. Default 'title'.
+        query: substring (kind='title'), phrase (kind='text'), or exact tag.
+        kind: 'title', 'text', or 'tag'. Default 'title'.
         limit: max results. Default 20.
 
     Returns:
-        {"hits": [{"path", "title", "score", "matched_in"}, ...]} on success;
+        {"hits": [{"path", "title", "score", "matched_in", "bundle_path",
+        "bundle_handle"}, ...]} on success;
         {"error": "...", "hint": "..."} on failure.
     """
     try:
@@ -566,11 +569,14 @@ def eno_health() -> dict[str, Any]:
     """Quick liveness check on the eno backend.
 
     For ServiceBackend (when $ENO_SERVICE_URL is set), pings /health.
-    For LocalBackend, confirms the index file exists. Diagnostic only —
-    don't call this before every other tool.
+    For LocalBackend, confirms the index file exists and reports whether it is
+    a bounded Flip-estate index. Estate scope includes canonical notebook and
+    shadow-copy counts so agents can see what discovery covered. Diagnostic
+    only — don't call this before every other tool.
 
     Returns:
-        {"ok", "mode", "vault" | "service_url"}; or {"error", "hint"}.
+        {"ok", "mode", "vault" | "service_url", "read_only", "scope"};
+        or {"error", "hint"}. Scope is null for an ordinary single vault.
     """
     try:
         backend = make_backend()
@@ -584,11 +590,30 @@ def eno_health() -> dict[str, Any]:
                 "vault": str(backend.vault),
                 "hint": "no index — run `eno index`",
             }
-        return {
+        result = {
             "ok": True,
             "mode": "local",
             "vault": str(backend.vault),
             "index": str(index_path(backend.vault)),
+            "read_only": read_only(),
         }
+        try:
+            state = json.loads(state_path(backend.vault).read_text(encoding="utf-8"))
+        except (OSError, UnicodeDecodeError, json.JSONDecodeError):
+            state = {}
+        scope = state.get("scope")
+        if isinstance(scope, dict):
+            result["scope"] = {
+                key: scope[key]
+                for key in (
+                    "mode", "registry", "notebooks_discovered",
+                    "notebooks_indexed", "duplicate_lineages",
+                    "shadowed_copies", "missing_uids", "ignored_hidden_copies",
+                )
+                if key in scope
+            }
+        else:
+            result["scope"] = None
+        return result
     except ClientError as e:
         return _err(e)

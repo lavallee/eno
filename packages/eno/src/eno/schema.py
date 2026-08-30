@@ -8,11 +8,14 @@ v3 adds `links.kind` ('wiki' | 'md' — markdown links are OKF's cross-linking
 form) and the portable OKF v0.2 trust/lifecycle columns on notes (status,
 stale_after, generated_*, verified_*, sources_*). All derived from frontmatter
 plus link resolution; the index stays fully disposable.
+
+v4 adds an FTS5 title/body index so one estate index can retrieve concepts
+across many small repo-local notebooks without rereading every file.
 """
 
 import sqlite3
 
-SCHEMA_VERSION = 3
+SCHEMA_VERSION = 4
 
 SCHEMA_SQL = """
 CREATE TABLE IF NOT EXISTS notes (
@@ -71,6 +74,13 @@ CREATE TABLE IF NOT EXISTS aliases (
     alias TEXT NOT NULL
 );
 
+CREATE VIRTUAL TABLE IF NOT EXISTS notes_fts USING fts5(
+    path UNINDEXED,
+    title,
+    body,
+    tokenize = 'unicode61'
+);
+
 CREATE INDEX IF NOT EXISTS idx_links_target ON links(target_path);
 CREATE INDEX IF NOT EXISTS idx_links_src ON links(src_path);
 CREATE INDEX IF NOT EXISTS idx_tags_tag ON tags(tag);
@@ -86,6 +96,7 @@ DROP TABLE IF EXISTS tags;
 DROP TABLE IF EXISTS links;
 DROP TABLE IF EXISTS headings;
 DROP TABLE IF EXISTS notes;
+DROP TABLE IF EXISTS notes_fts;
 """
 
 

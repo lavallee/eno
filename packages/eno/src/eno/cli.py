@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .backend import make_backend
 from .config import VaultNotConfigured, vault_dir
+from .estate import EstateRegistryError, load_estate_scope
 from .indexer import index_vault
 from .views import (
     BrokenLink,
@@ -71,10 +72,18 @@ def _build_parser() -> argparse.ArgumentParser:
 
     p_index = sub.add_parser("index", help="index the vault (writes .eno/index.db)")
     p_index.add_argument("--full", action="store_true", help="reparse all notes")
+    p_index.add_argument(
+        "--flip-registry", type=Path,
+        help="index canonical Flip notebooks from this flip index.jsonl",
+    )
+    p_index.add_argument(
+        "--include-root", action="append", type=Path, default=[],
+        help="also index a complete directory below --vault (repeatable)",
+    )
 
-    p_search = sub.add_parser("search", help="search notes by title or tag")
+    p_search = sub.add_parser("search", help="search notes by title, text, or tag")
     p_search.add_argument("query")
-    p_search.add_argument("--kind", choices=["title", "tag"], default="title")
+    p_search.add_argument("--kind", choices=["title", "text", "tag"], default="title")
     p_search.add_argument("--limit", type=int, default=20)
 
     p_note = sub.add_parser("note", help="show frontmatter + headings + excerpt for one note")
@@ -334,17 +343,38 @@ def _cmd_index(args) -> int:
     if not vault.exists():
         print(f"vault not found: {vault}", file=sys.stderr)
         return 2
-    stats = index_vault(vault, full=args.full)
+    estate = None
+    if args.flip_registry is not None:
+        try:
+            estate = load_estate_scope(
+                vault, args.flip_registry, include_roots=args.include_root
+            )
+        except EstateRegistryError as exc:
+            print(f"estate scope invalid: {exc}", file=sys.stderr)
+            return 2
+    elif args.include_root:
+        print("--include-root requires --flip-registry", file=sys.stderr)
+        return 2
+    stats = index_vault(vault, full=args.full, estate=estate)
     if args.json:
         print(json.dumps(asdict(stats), indent=2))
     else:
         # The flip segment appears only on flip vaults — flip-free output unchanged.
         flip_segment = f", {stats.flip_bundles} flip bundles" if stats.flip_bundles > 0 else ""
+        scope_segment = (
+            f", {stats.notebooks_indexed} canonical notebooks from "
+            f"{stats.notebooks_discovered} discovered"
+            if stats.scope == "flip-estate" else ""
+        )
+        shadow_segment = (
+            f", {stats.shadowed_copies} duplicate copies shadowed"
+            if stats.shadowed_copies else ""
+        )
         print(
             f"indexed {stats.parsed} of {stats.seen} notes "
             f"({stats.skipped_unchanged} unchanged, {stats.deleted} deleted) "
             f"— {stats.links_resolved} links resolved, {stats.links_broken} broken"
-            f"{flip_segment} "
+            f"{flip_segment}{scope_segment}{shadow_segment} "
             f"in {stats.elapsed_s:.2f}s"
         )
     return 0

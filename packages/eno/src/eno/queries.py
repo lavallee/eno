@@ -67,18 +67,23 @@ def search(
     if kind == "title":
         rows = db.execute(
             """
-            SELECT path, title FROM notes
+            SELECT path, title, bundle_path, bundle_handle FROM notes
             WHERE LOWER(title) LIKE ?
             ORDER BY LENGTH(title), title
             LIMIT ?
             """,
             (f"%{q_lower}%", limit),
         ).fetchall()
-        return [Hit(path=p, title=t, score=1.0, matched_in="title") for p, t in rows]
+        return [
+            Hit(path=p, title=t, score=1.0, matched_in="title",
+                bundle_path=bundle, bundle_handle=handle)
+            for p, t, bundle, handle in rows
+        ]
     if kind == "tag":
         rows = db.execute(
             """
-            SELECT DISTINCT n.path, n.title FROM notes n
+            SELECT DISTINCT n.path, n.title, n.bundle_path, n.bundle_handle
+            FROM notes n
             JOIN tags t ON t.path = n.path
             WHERE LOWER(t.tag) = ?
             ORDER BY n.title
@@ -86,7 +91,33 @@ def search(
             """,
             (q_lower, limit),
         ).fetchall()
-        return [Hit(path=p, title=t, score=1.0, matched_in="tag") for p, t in rows]
+        return [
+            Hit(path=p, title=t, score=1.0, matched_in="tag",
+                bundle_path=bundle, bundle_handle=handle)
+            for p, t, bundle, handle in rows
+        ]
+    if kind == "text":
+        phrase = q.strip()
+        if not phrase:
+            return []
+        match = f'"{phrase.replace(chr(34), chr(34) * 2)}"'
+        rows = db.execute(
+            """
+            SELECT f.path, n.title, n.bundle_path, n.bundle_handle,
+                   bm25(notes_fts) AS rank
+            FROM notes_fts AS f
+            JOIN notes n ON n.path = f.path
+            WHERE notes_fts MATCH ?
+            ORDER BY rank, n.title
+            LIMIT ?
+            """,
+            (match, limit),
+        ).fetchall()
+        return [
+            Hit(path=p, title=t, score=-float(rank), matched_in="text",
+                bundle_path=bundle, bundle_handle=handle)
+            for p, t, bundle, handle, rank in rows
+        ]
     raise ValueError(f"unknown search kind: {kind}")
 
 
