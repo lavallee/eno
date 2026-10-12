@@ -1,6 +1,7 @@
 """Tests for query primitives. Each builds a small fixture vault, indexes it, then queries."""
 
 import time
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
 from eno import queries
@@ -161,25 +162,41 @@ def test_stale_excludes_reference_and_archived_by_default(tmp_path):
     assert paths == ["Active.md"]
 
 
-def test_stale_uses_frontmatter_updated_when_present(tmp_path):
+def test_stale_uses_frontmatter_updated_when_present(tmp_path, monkeypatch):
     """Notes with an `updated:` field use that, not mtime — so a fresh
     git clone (recent mtime) doesn't hide an old `updated:` date."""
-    recent = time.time() - 5 * 86400  # mtime says recent
+    now = datetime(2026, 10, 12, 12, tzinfo=UTC)
+    cutoff = now.date() - timedelta(days=180)
+    recent = now.timestamp() - 5 * 86400  # mtime says recent
     _write(
         tmp_path,
         "OldUpdated.md",
-        "---\nupdated: '2024-01-01'\n---\n# Old\n",
+        f"---\nupdated: '{cutoff - timedelta(days=1)}'\n---\n# Old\n",
         mtime=recent,
     )
     _write(
         tmp_path,
         "RecentUpdated.md",
-        "---\nupdated: '2026-04-01'\n---\n# Recent\n",
+        f"---\nupdated: '{cutoff + timedelta(days=1)}'\n---\n# Recent\n",
+        mtime=recent,
+    )
+    _write(
+        tmp_path,
+        "AtCutoff.md",
+        f"---\nupdated: '{cutoff}'\n---\n# At cutoff\n",
         mtime=recent,
     )
     _write(tmp_path, "NoUpdated.md", "# No Updated\n", mtime=recent)
     index_vault(tmp_path)
     db = _open(tmp_path)
+
+    class FixedDatetime(datetime):
+        @classmethod
+        def now(cls, tz=None):
+            return now.astimezone(tz)
+
+    monkeypatch.setattr(queries, "datetime", FixedDatetime)
+    monkeypatch.setattr(queries.time, "time", lambda: now.timestamp())
     paths = [r.path for r in queries.stale(db, older_than_days=180)]
     assert paths == ["OldUpdated.md"]
 
