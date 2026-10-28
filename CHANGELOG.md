@@ -7,6 +7,33 @@ workspace move in lockstep.
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-10-28
+
+### Added
+
+- **Note proposal review in Obsidian** — new plugin command
+  `Eno: Review a note proposal`. An agent queues a proposed rewrite of a note
+  (`scripts/propose_note.py`); the command shows the complete current and
+  proposed versions side by side and applies the proposal to the active
+  editor only if the note still matches the source the agent read. Needs no
+  running eno-service.
+- **Shared notes guide** — [`docs/shared-notes.md`](docs/shared-notes.md)
+  describes using a note as the shared working surface between a person and an
+  agent: read the full source, preserve it, separate proposed tasks from
+  decisions, re-read before writing. The `eno-vault` skill now points agents
+  at this workflow and the proposal queue. `scripts/read_note.py` is a helper
+  for reading a note's full text.
+- **Tiling threshold labels** — `scripts/socket_labels.py` converts an
+  `eno tiling --json` report into receipt/truth label files under
+  `data/labels/`, so the 0.80/0.90 duplicate bands can be calibrated against
+  reviewed pairs (see [`SOCKET-LABELS.md`](SOCKET-LABELS.md)). No change to
+  the tiling decision itself.
+
+### Fixed
+
+- A stale-query test hard-coded a "recent" `updated:` date that aged past the
+  180-day threshold; it is now relative to the test run.
+
 ## [0.4.0] — 2026-08-30
 
 This release keeps Eno on its explicitly pre-stable `0.x` line. It supersedes
@@ -183,7 +210,8 @@ First public release.
 - Vault location is configured via `--vault` or `$ENO_VAULT_DIR`; there is no
   default path.
 
-[Unreleased]: https://github.com/lavallee/eno/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/lavallee/eno/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/lavallee/eno/compare/v0.4.0...v0.5.0
 [0.4.0]: https://github.com/lavallee/eno/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/lavallee/eno/compare/v0.2.0...v0.3.0
 [0.2.0]: https://github.com/lavallee/eno/compare/v0.1.1...v0.2.0
