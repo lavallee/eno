@@ -174,7 +174,7 @@ def test_stale_uses_frontmatter_updated_when_present(tmp_path):
     _write(
         tmp_path,
         "RecentUpdated.md",
-        "---\nupdated: '2026-04-01'\n---\n# Recent\n",
+        f"---\nupdated: '{time.strftime('%Y-%m-%d', time.localtime(recent))}'\n---\n# Recent\n",
         mtime=recent,
     )
     _write(tmp_path, "NoUpdated.md", "# No Updated\n", mtime=recent)
