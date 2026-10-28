@@ -44,3 +44,6 @@
   width: 100%;
   text-align: left;
 }
+
+.eno-proposal-input, .eno-proposal-version { width: 100%; min-height: 10em; font-family: var(--font-monospace); }
+.eno-proposal-error { color: var(--text-error); }

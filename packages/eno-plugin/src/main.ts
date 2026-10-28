@@ -1,4 +1,5 @@
-import { Notice, Plugin, TFile, WorkspaceLeaf } from "obsidian";
+import { MarkdownView, Notice, Plugin, TFile, WorkspaceLeaf } from "obsidian";
+import { parseProposal, ProposalModal, PROPOSALS_FOLDER } from "./proposal-modal";
 import { EnoApi } from "./api";
 import { HealthView, VIEW_TYPE_ENO_HEALTH } from "./health-view";
 import {
@@ -58,6 +59,29 @@ export default class EnoPlugin extends Plugin {
         return true;
       },
     });
+
+    this.addCommand({
+      id: "review-note-proposal",
+      name: "Review a note proposal",
+      checkCallback: (checking: boolean) => {
+        const view = this.app.workspace.getActiveViewOfType(MarkdownView);
+        if (!view || !view.file || view.getMode() !== "source") return false;
+        if (!checking) new ProposalModal(this.app, view).open();
+        return true;
+      },
+    });
+
+    this.registerEvent(this.app.vault.on("create", (file) => {
+      if (!(file instanceof TFile) || file.parent?.path !== PROPOSALS_FOLDER || file.extension !== "md") return;
+      void this.app.vault.read(file).then(raw => {
+        try {
+          const proposal = parseProposal(raw);
+          if (this.app.workspace.getActiveFile()?.path === proposal.path) {
+            new Notice("Eno: a proposal is ready. Run Review a note proposal.", 10000);
+          }
+        } catch { /* A non-proposal file needs no notification. */ }
+      });
+    }));
 
     this.addSettingTab(new EnoSettingsTab(this.app, this));
   }

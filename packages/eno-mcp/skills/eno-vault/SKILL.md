@@ -21,3 +21,16 @@ Before writing, find the canonical home and extend it when appropriate. Create a
 new note only when none fits. Preserve agent authorship on new notes, and surface
 ambiguity before writing. If Eno reports a read-only estate, do not use its write
 tools; write through the owning notebook's repo and Flip workflow instead.
+
+For collaborative cleanup of an existing note, read the current full source,
+preserve it, and distinguish proposed tasks from decisions and known status.
+Re-read before writing and verify afterward; a CLI read followed by a write is
+not an atomic conflict check. See the repository guide `docs/shared-notes.md`
+when available.
+
+For Eno plugin review, queue the proposal through the running Obsidian app
+using `scripts/propose_note.py` in the Eno checkout; see `docs/shared-notes.md`.
+Provide the exact full source and replacement as files, preserving frontmatter,
+source text, and existing status as appropriate. Tell the person a proposal is
+ready in Eno: Review a note proposal; do not ask them to copy JSON. If the note
+changed, read it again and regenerate the proposal.

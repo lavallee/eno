@@ -167,6 +167,7 @@ which directory that is. The index lives at `<vault>/.eno/` (override with
 - **[`examples/demo-vault`](examples/demo-vault)** — the shipped synthetic vault
   used throughout these docs; safe to index and experiment on.
 - **[MCP setup](packages/eno-mcp/README.md)** — wiring eno into a coding agent.
+- **[Shared notes](docs/shared-notes.md)** — a person and agent working together in a vault note.
 - **[CONTRIBUTING](CONTRIBUTING.md)** · **[CHANGELOG](CHANGELOG.md)** ·
   **[RELEASING](RELEASING.md)**.
 

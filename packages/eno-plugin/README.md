@@ -38,7 +38,12 @@ Settings → Eno:
 ## What it does
 
 - **Right-pane "Vault Health" view** (ribbon icon: 🌸): service status + counts from the latest garden + hygiene reports.
+- **Review a note proposal**: choose an agent-queued proposal, compare
+  both complete versions, and apply it to the active editor only if it still
+  matches the source. See the [shared notes guide](../../docs/shared-notes.md)
+  for the format and limitations. No service is required for this command.
 - **Commands** (palette):
+  - `Eno: Review a note proposal`
   - `Eno: Open vault health view`
   - `Eno: Garden now` (POST /garden, summary toast)
   - `Eno: Open latest garden report`
